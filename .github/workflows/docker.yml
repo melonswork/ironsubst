@@ -1,11 +1,16 @@
 name: Build and Publish Docker Image
 
 on:
-  push:
-    branches: [ "master" ]
-    tags: [ "v*.*.*" ]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (branch, tag, or SHA)"
+        required: false
+        default: "master"
 
 env:
   REGISTRY: ghcr.io
@@ -20,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - uses: docker/setup-qemu-action@v4
 
@@ -47,7 +54,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' && github.repository_owner == 'melonswork' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
