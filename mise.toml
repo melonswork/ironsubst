@@ -52,6 +52,30 @@ hyperfine -N \
 cat "$results_file"
 """
 
+[tasks.size-compare]
+description = "Compare release binary size of ironsubst vs a8m/envsubst"
+run = """
+#!/usr/bin/env bash
+set -e
+mise run release
+
+IRON_BIN="target/release/ironsubst"
+ENVSUBST_BIN="$(which envsubst)"
+
+IRON_SIZE=$(wc -c < "$IRON_BIN" | tr -d ' ')
+ENVSUBST_SIZE=$(wc -c < "$ENVSUBST_BIN" | tr -d ' ')
+
+IRON_KB=$(echo "scale=1; $IRON_SIZE / 1024" | bc)
+ENVSUBST_KB=$(echo "scale=1; $ENVSUBST_SIZE / 1024" | bc)
+
+DIFF=$((ENVSUBST_SIZE - IRON_SIZE))
+PCT=$(echo "scale=1; $DIFF * 100 / $ENVSUBST_SIZE" | bc)
+
+echo "ironsubst:      ${IRON_KB} KB (${IRON_SIZE} bytes)"
+echo "envsubst:       ${ENVSUBST_KB} KB (${ENVSUBST_SIZE} bytes)"
+echo "ironsubst is    ${PCT}% smaller (${DIFF} bytes saved)"
+"""
+
 [tasks.hooks]
 description = "Install hk git hooks (run once after cloning)"
 run = "hk install"

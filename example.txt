@@ -54,8 +54,8 @@ $${IRON_UNSET}          -> ${IRON_UNSET}
 # :? fails and exits if variable is unset OR empty.
 # If no message is provided, a default message is printed.
 # DIVERGENCE: a8m/envsubst does NOT support these operators (outputs literal).
-(Unset)    ${IRON_UNSET?custom unset error} -> (would exit with "IRON_UNSET: custom unset error")
-(Empty)    ${IRON_EMPTY:?custom empty error} -> (would exit with "IRON_EMPTY: custom empty error")
+(Unset)    $${IRON_UNSET?custom unset error} -> (would exit with "IRON_UNSET: custom unset error")
+(Empty)    $${IRON_EMPTY:?custom empty error} -> (would exit with "IRON_EMPTY: custom empty error")
 
 --- Nested Placeholders ---
 # ironsubst resolves nested ${...} expressions in fallback values.

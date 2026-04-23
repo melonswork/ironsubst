@@ -3,8 +3,9 @@ Output demo.gif
 Require ironsubst
 
 Set Shell "zsh"
-Set FontSize 24
-Set Width 1200
+Set WindowBar Colorful
+Set FontSize 20
+Set Width 900
 Set Height 600
 
 Type `export WHAT_AM_I="cool"`
@@ -50,19 +51,24 @@ Sleep 5s
 Enter 4
 
 Type "ironsubst -- '${NOT_SET:=fallback!}'"
+Sleep 50ms
 Enter
 Sleep 2s
 
 Type "ironsubst --require-values -- '${NOT_SET:=fallback!}'"
+Sleep 50ms
 Enter
 Sleep 2s
 
 Type "export EMPTY=''"
+Sleep 25ms
 Enter
 Type "ironsubst --require-values -- '${EMPTY}'"
+Sleep 50ms
 Enter
 Sleep 2s
 
 Type "ironsubst --require-nonempty-values -- '${EMPTY}'"
+Sleep 50ms
 Enter
-Sleep 2s
+Sleep 5s
