@@ -29,11 +29,11 @@ run = "cargo build --release -q && PATH=$PWD/target/release:$PATH vhs < demo.tap
 
 [tasks.example]
 run = "cargo run -q -- -i example.txt"
-env = { IRONSUBST_SET = "hello_world", IRONSUBST_EMPTY = "" }
+env = { IRON_SET = "hello_world", IRON_EMPTY = "" }
 
 [tasks.bench]
 description = "Compare performance with a8m/envsubst"
-env = { IRONSUBST_SET = "hello_world", IRONSUBST_EMPTY = "" }
+env = { IRON_SET = "hello_world", IRON_EMPTY = "" }
 run = """
 #!/usr/bin/env bash
 set -e
@@ -51,7 +51,7 @@ cat "$results_file"
 
 [tasks.parity-test]
 description = "Compare ironsubst vs a8m/envsubst output side-by-side (differences are expected and documented)"
-env = { IRONSUBST_SET = "hello_world", IRONSUBST_EMPTY = "" }
+env = { IRON_SET = "hello_world", IRON_EMPTY = "" }
 run = """
 #!/usr/bin/env bash
 
@@ -65,11 +65,11 @@ fi
 echo "Building ironsubst..."
 cargo build -q 2>&1
 
-OUT_MEL=$(mktemp)
+OUT_IRON=$(mktemp)
 OUT_ENV=$(mktemp)
-trap 'rm -f "$OUT_MEL" "$OUT_ENV"' EXIT
+trap 'rm -f "$OUT_IRON" "$OUT_ENV"' EXIT
 
-target/debug/ironsubst -i "$FILE" > "$OUT_MEL"
+target/debug/ironsubst -i "$FILE" > "$OUT_IRON"
 envsubst -i "$FILE" > "$OUT_ENV"
 
 echo ""
@@ -78,7 +78,7 @@ echo "  ironsubst vs a8m/envsubst comparison for: $FILE"
 echo "================================================================"
 echo ""
 
-if diff -u --label "a8m/envsubst" --label "ironsubst" "$OUT_ENV" "$OUT_MEL"; then
+if diff -u --label "a8m/envsubst" --label "ironsubst" "$OUT_ENV" "$OUT_IRON"; then
     echo "No differences — outputs are identical for this file."
 else
     echo ""
@@ -86,9 +86,9 @@ else
     echo "  Known intentional divergences:"
     echo ""
     echo '  ${VAR:+alt}  ironsubst: POSIX-correct — fires only when VAR is'
-    echo '                          set AND non-empty.'
-    echo '               a8m:      fires whenever VAR is set (even if empty)'
-    echo '                         — this is a bug in a8m/envsubst.'
+    echo '                           set AND non-empty.'
+    echo '               a8m:       fires whenever VAR is set (even if empty)'
+    echo '                          — this is a bug in a8m/envsubst.'
     echo ''
     echo '  ${VAR+alt}   both tools agree: fires whenever VAR is set (even'
     echo '                                  if empty).'

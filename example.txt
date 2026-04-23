@@ -3,8 +3,8 @@
 #
 # Run with:
 #   mise run example
-# which sets: IRONSUBST_SET=hello_world  IRONSUBST_EMPTY=""
-# and leaves IRONSUBST_UNSET / IRONSUBST_UNSET_2 absent from the environment.
+# which sets: IRON_SET=hello_world  IRON_EMPTY=""
+# and leaves IRON_UNSET / IRON_UNSET_2 absent from the environment.
 #
 # To compare against a8m/envsubst, run:
 #   mise run parity-test
@@ -12,29 +12,29 @@
 ##############################################################################
 
 --- Basic Substitution (Optional Braces) ---
-$IRONSUBST_SET              -> $IRONSUBST_SET
-${IRONSUBST_SET}            -> ${IRONSUBST_SET}
-$IRONSUBST_EMPTY            -> $IRONSUBST_EMPTY
-${IRONSUBST_EMPTY}          -> ${IRONSUBST_EMPTY}
-$IRONSUBST_UNSET            -> $IRONSUBST_UNSET
-${IRONSUBST_UNSET}          -> ${IRONSUBST_UNSET}
+$$IRON_SET              -> $IRON_SET
+$${IRON_SET}            -> ${IRON_SET}
+$$IRON_EMPTY            -> $IRON_EMPTY
+$${IRON_EMPTY}          -> ${IRON_EMPTY}
+$$IRON_UNSET            -> $IRON_UNSET
+$${IRON_UNSET}          -> ${IRON_UNSET}
 
 --- Default Values (- and :-) ---
 # Both tools agree on this section.
-(Unset)    ${IRONSUBST_UNSET-default}   -> ${IRONSUBST_UNSET-default}
-(Unset)    ${IRONSUBST_UNSET:-default}  -> ${IRONSUBST_UNSET:-default}
-(Empty)    ${IRONSUBST_EMPTY-default}   -> ${IRONSUBST_EMPTY-default}
-(Empty)    ${IRONSUBST_EMPTY:-default}  -> ${IRONSUBST_EMPTY:-default}
-(Set)      ${IRONSUBST_SET-default}     -> ${IRONSUBST_SET-default}
-(Set)      ${IRONSUBST_SET:-default}    -> ${IRONSUBST_SET:-default}
+(Unset)    $${IRON_UNSET-default}   -> ${IRON_UNSET-default}
+(Unset)    $${IRON_UNSET:-default}  -> ${IRON_UNSET:-default}
+(Empty)    $${IRON_EMPTY-default}   -> ${IRON_EMPTY-default}
+(Empty)    $${IRON_EMPTY:-default}  -> ${IRON_EMPTY:-default}
+(Set)      $${IRON_SET-default}     -> ${IRON_SET-default}
+(Set)      $${IRON_SET:-default}    -> ${IRON_SET:-default}
 
 --- Assign/Default (= and :=) ---
 # Both tools agree. Note: := does NOT actually assign to the environment;
 # it only outputs the default value (documented limitation).
-(Unset)    ${IRONSUBST_UNSET=default}   -> ${IRONSUBST_UNSET=default}
-(Unset)    ${IRONSUBST_UNSET:=default}  -> ${IRONSUBST_UNSET:=default}
-(Empty)    ${IRONSUBST_EMPTY=default}   -> ${IRONSUBST_EMPTY=default}
-(Empty)    ${IRONSUBST_EMPTY:=default}  -> ${IRONSUBST_EMPTY:=default}
+(Unset)    $${IRON_UNSET=default}   -> ${IRON_UNSET=default}
+(Unset)    $${IRON_UNSET:=default}  -> ${IRON_UNSET:=default}
+(Empty)    $${IRON_EMPTY=default}   -> ${IRON_EMPTY=default}
+(Empty)    $${IRON_EMPTY:=default}  -> ${IRON_EMPTY:=default}
 
 --- Substitute/Alternate (+ and :+) ---
 # + fires when variable is set (even if empty).      Both tools agree.
@@ -44,12 +44,12 @@ ${IRONSUBST_UNSET}          -> ${IRONSUBST_UNSET}
 #
 # DIVERGENCE on lines marked [DIVERGES]:
 #
-(Unset)    ${IRONSUBST_UNSET+sub}       -> ${IRONSUBST_UNSET+sub}
-(Unset)    ${IRONSUBST_UNSET:+sub}      -> ${IRONSUBST_UNSET:+sub}
-(Empty)    ${IRONSUBST_EMPTY+sub}       -> ${IRONSUBST_EMPTY+sub}
-(Empty)    ${IRONSUBST_EMPTY:+sub}      -> ${IRONSUBST_EMPTY:+sub}   [DIVERGES: ironsubst="", a8m="sub"]
-(Set)      ${IRONSUBST_SET+sub}         -> ${IRONSUBST_SET+sub}
-(Set)      ${IRONSUBST_SET:+sub}        -> ${IRONSUBST_SET:+sub}
+(Unset)    $${IRON_UNSET+sub}       -> ${IRON_UNSET+sub}
+(Unset)    $${IRON_UNSET:+sub}      -> ${IRON_UNSET:+sub}
+(Empty)    $${IRON_EMPTY+sub}       -> ${IRON_EMPTY+sub}
+(Empty)    $${IRON_EMPTY:+sub}      -> ${IRON_EMPTY:+sub}   [DIVERGES: ironsubst="", a8m="sub"]
+(Set)      $${IRON_SET+sub}         -> ${IRON_SET+sub}
+(Set)      $${IRON_SET:+sub}        -> ${IRON_SET:+sub}
 
 --- Nested Placeholders ---
 # ironsubst resolves nested ${...} expressions in fallback values.
@@ -58,16 +58,16 @@ ${IRONSUBST_UNSET}          -> ${IRONSUBST_UNSET}
 # DIVERGES: a8m outputs truncated/broken results for all lines below.
 #
 # Unset outer, set inner:
-${IRONSUBST_UNSET:-${IRONSUBST_SET}}
+${IRON_UNSET:-${IRON_SET}}
 # Unset outer, unset inner falls back to literal:
-${IRONSUBST_UNSET:-${IRONSUBST_UNSET_2:-nested_literal}}
+${IRON_UNSET:-${IRON_UNSET_2:-nested_literal}}
 # Empty outer (:-), set inner:
-${IRONSUBST_EMPTY:-${IRONSUBST_SET}}
+${IRON_EMPTY:-${IRON_SET}}
 # Set outer wins — inner is never evaluated:
-${IRONSUBST_SET:-${IRONSUBST_UNSET}}
+${IRON_SET:-${IRON_UNSET}}
 
 --- Escape Sequences ---
 # $$ is an escape for a literal $. Both tools agree.
-$$IRONSUBST_SET             -> $$IRONSUBST_SET
-$${IRONSUBST_SET}           -> $${IRONSUBST_SET}
-$$$IRONSUBST_SET            -> $$$IRONSUBST_SET
+$$$IRON_SET             -> $$IRON_SET
+$$${IRON_SET}           -> $${IRON_SET}
+$$$$IRON_SET            -> $$$IRON_SET
