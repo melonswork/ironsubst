@@ -6,6 +6,8 @@ hk = "latest"
 pkl = "latest"
 vhs = "latest"
 git-cliff = "latest"
+act = "latest"
+snyk = "latest"
 
 [tasks]
 "run" = "cargo run --"
@@ -79,3 +81,15 @@ fi
 
 rm -f "$OUT_MEL" "$OUT_ENV"
 """
+
+[tasks.test-gha]
+description = "Run CI workflow locally via act"
+run = "act -j test"
+
+[tasks.lint-gha]
+description = "Lint GitHub Actions workflows"
+run = "actionlint"
+
+[tasks.snyk-test]
+description = "Run Snyk security scan"
+run = "mise exec snyk -- snyk test"
