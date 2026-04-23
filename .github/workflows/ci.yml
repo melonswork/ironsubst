@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Use latest Rust
-      uses: dtolnay/rust-toolchain@stable
+    - name: Setup tools with mise
+      uses: jdx/mise-action@v2
     - name: Check formatting
-      run: cargo fmt -- --check
+      run: mise run format:check
     - name: Run clippy
-      run: cargo clippy -- -D warnings
+      run: mise run lint:check
     - name: Run tests
-      run: cargo test
+      run: mise run test
