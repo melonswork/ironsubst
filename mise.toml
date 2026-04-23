@@ -3,6 +3,7 @@ envsubst = "latest"
 rust = "latest"
 hyperfine = "latest"
 hk = "latest"
+pkl = "latest"
 
 [tasks]
 "run" = "cargo run --"
