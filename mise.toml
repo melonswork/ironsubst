@@ -101,8 +101,16 @@ description = "Install hk git hooks (run once after cloning)"
 run = "hk install"
 
 [tasks.test-gha]
-description = "Run CI workflow locally via act (requires: gh auth login)"
-run = "act -j test -s GITHUB_TOKEN=$(gh auth token)"
+description = "Run CI workflow locally via act"
+run = """
+#!/usr/bin/env bash
+set -e
+if ! gh auth token &>/dev/null; then
+  echo "Not logged into GitHub. Run: gh auth login"
+  exit 1
+fi
+act -j test -s GITHUB_TOKEN=$(gh auth token)
+"""
 
 [tasks.lint-gha]
 description = "Lint GitHub Actions workflows"
