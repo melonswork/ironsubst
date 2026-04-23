@@ -96,6 +96,10 @@ else
 fi
 """
 
+[tasks.hooks]
+description = "Install hk git hooks (run once after cloning)"
+run = "hk install"
+
 [tasks.test-gha]
 description = "Run CI workflow locally via act"
 run = "act -j test"
