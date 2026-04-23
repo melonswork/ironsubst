@@ -24,20 +24,17 @@ jobs:
     - name: Setup tools with mise
       uses: jdx/mise-action@v2
     - name: Format check
-      run: mise run format:check
-    - name: Clippy
-      run: mise run lint:check
-    - name: Tests
-      run: mise run test
-    - name: Summary
-      if: always()
       run: |
-        echo "## Tests" >> $GITHUB_STEP_SUMMARY
-        echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-        echo "| Format | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| Clippy | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| Unit + Integration | ✅ |" >> $GITHUB_STEP_SUMMARY
+        mise run format:check
+        echo "- Format ✅" >> $GITHUB_STEP_SUMMARY
+    - name: Clippy
+      run: |
+        mise run lint:check
+        echo "- Clippy ✅" >> $GITHUB_STEP_SUMMARY
+    - name: Tests
+      run: |
+        mise run test
+        echo "- Tests ✅" >> $GITHUB_STEP_SUMMARY
 
   test-macos:
     runs-on: macos-latest
@@ -77,11 +74,9 @@ jobs:
       with:
         files: lcov.info
         fail_ci_if_error: false
+      continue-on-error: true
     - name: Summary
-      if: always()
-      run: |
-        echo "## Coverage" >> $GITHUB_STEP_SUMMARY
-        echo "Uploaded to [Codecov](https://app.codecov.io/gh/melonswork/ironsubst)" >> $GITHUB_STEP_SUMMARY
+      run: echo "Coverage uploaded to [Codecov](https://app.codecov.io/gh/melonswork/ironsubst)" >> $GITHUB_STEP_SUMMARY
 
   security-audit:
     runs-on: ubuntu-latest
@@ -97,19 +92,15 @@ jobs:
     - name: Setup tools with mise
       uses: jdx/mise-action@v2
     - name: Cargo audit
-      run: mise run audit
+      run: |
+        mise run audit
+        echo "- cargo-audit ✅" >> $GITHUB_STEP_SUMMARY
     - name: Snyk
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      run: mise run snyk-test
-    - name: Summary
-      if: always()
       run: |
-        echo "## Security" >> $GITHUB_STEP_SUMMARY
-        echo "| Scanner | Result |" >> $GITHUB_STEP_SUMMARY
-        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-        echo "| cargo-audit | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| snyk | ✅ |" >> $GITHUB_STEP_SUMMARY
+        mise run snyk-test
+        echo "- snyk ✅" >> $GITHUB_STEP_SUMMARY
 
   bench:
     runs-on: ubuntu-latest
