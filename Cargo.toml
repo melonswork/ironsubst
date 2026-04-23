@@ -2,8 +2,17 @@
 name = "ironsubst"
 version = "0.1.0"
 edition = "2024"
+# Rust 2024 edition requires 1.85+; declare explicitly so `cargo install` gives
+# a clear error on older toolchains instead of a cryptic compile failure.
+rust-version = "1.85"
 
 [dependencies]
 clap = { version = "4.6.0", features = ["derive"] }
 tempfile = "3"
 thiserror = "2.0.18"
+
+[profile.release]
+lto = true          # Link-time optimisation — reduces binary size ~20-30% and improves throughput
+codegen-units = 1   # Single codegen unit lets LLVM see the whole program; slower compile, faster runtime
+strip = true        # Strip symbols from the final binary
+opt-level = 3       # Maximum optimisation (default, but explicit is better than implicit)
