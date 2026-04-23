@@ -2,7 +2,7 @@
 
 A blazing fast, deeply configurable environment variable substitution tool written in Rust.
 
-`ironsubst` is a ground-up Rust rewrite of [`a8m/envsubst`](https://github.com/a8m/envsubst) with 100% test parity and enhanced strictness configurations for modern DevOps pipelines.
+`ironsubst` is a ground-up Rust rewrite of [`a8m/envsubst`](https://github.com/a8m/envsubst) with enhanced strictness configurations for modern DevOps pipelines. It follows POSIX semantics for all operators (including the POSIX-correct distinction between `${VAR:+alt}` and `${VAR+alt}`).
 
 **~25% faster and ~62% smaller** than the Go reference implementation (`envsubst`): ironsubst ships as a ~760 KB stripped binary vs ~2.4 MB for Go envsubst — ideal for container images and embedded use cases.
 
@@ -68,6 +68,32 @@ You can also combine these with `-f` / `--fail-fast` to exit on the very first v
 
 ### Other Flags
 * `--no-digit`: Do not replace variables that start with a digit (e.g. `$1`, `${12}`).
+
+### Shell Completions
+
+```bash
+# Bash
+ironsubst completions bash > /etc/bash_completion.d/ironsubst
+# Zsh
+ironsubst completions zsh  > "${fpath[1]}/_ironsubst"
+# Fish
+ironsubst completions fish > ~/.config/fish/completions/ironsubst.fish
+```
+
+### Man Page
+
+The binary can self-generate a man page (useful for `cargo install` users who have no package manager to install it for them):
+
+```bash
+# User-local (no sudo required):
+mkdir -p ~/.local/share/man/man1
+ironsubst --generate-man-page > ~/.local/share/man/man1/ironsubst.1
+
+# System-wide:
+ironsubst --generate-man-page | sudo tee /usr/local/share/man/man1/ironsubst.1 > /dev/null
+```
+
+Then `man ironsubst` works immediately.
 
 ## Local Development (Mise)
 If you're developing `ironsubst` locally, you can use [mise](https://mise.jdx.dev) to interact with the project:

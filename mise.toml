@@ -8,6 +8,7 @@ vhs = "latest"
 git-cliff = "latest"
 act = "latest"
 snyk = "latest"
+"cargo:release-plz" = "latest"
 
 [tasks]
 "run" = "cargo run --"
@@ -49,11 +50,10 @@ cat "$results_file"
 """
 
 [tasks.parity-test]
-description = "Verify that ironsubst and a8m/envsubst produce identical output"
+description = "Compare ironsubst vs a8m/envsubst output side-by-side (differences are expected and documented)"
 env = { IRONSUBST_SET = "hello_world", IRONSUBST_EMPTY = "" }
 run = """
 #!/usr/bin/env bash
-set -e
 
 FILE="${1:-example.txt}"
 
@@ -63,23 +63,37 @@ if [ ! -f "$FILE" ]; then
 fi
 
 echo "Building ironsubst..."
-cargo build -q
+cargo build -q 2>&1
 
 OUT_MEL=$(mktemp)
 OUT_ENV=$(mktemp)
+trap 'rm -f "$OUT_MEL" "$OUT_ENV"' EXIT
 
 target/debug/ironsubst -i "$FILE" > "$OUT_MEL"
 envsubst -i "$FILE" > "$OUT_ENV"
 
-if diff -u "$OUT_ENV" "$OUT_MEL"; then
-    echo "✅ Parity test passed! Both tools produced identical output for '$FILE'."
-else
-    echo "❌ Parity test failed! Outputs differ for '$FILE'."
-    rm -f "$OUT_MEL" "$OUT_ENV"
-    exit 1
-fi
+echo ""
+echo "================================================================"
+echo "  ironsubst vs a8m/envsubst comparison for: $FILE"
+echo "================================================================"
+echo ""
 
-rm -f "$OUT_MEL" "$OUT_ENV"
+if diff -u --label "a8m/envsubst" --label "ironsubst" "$OUT_ENV" "$OUT_MEL"; then
+    echo "No differences — outputs are identical for this file."
+else
+    echo ""
+    echo "----------------------------------------------------------------"
+    echo "  Known intentional divergences:"
+    echo ""
+    echo '  ${VAR:+alt}  ironsubst: POSIX-correct — fires only when VAR is'
+    echo '                          set AND non-empty.'
+    echo '               a8m:      fires whenever VAR is set (even if empty)'
+    echo '                         — this is a bug in a8m/envsubst.'
+    echo ''
+    echo '  ${VAR+alt}   both tools agree: fires whenever VAR is set (even'
+    echo '                                  if empty).'
+    echo "----------------------------------------------------------------"
+fi
 """
 
 [tasks.test-gha]
@@ -93,3 +107,39 @@ run = "actionlint"
 [tasks.snyk-test]
 description = "Run Snyk security scan"
 run = "mise exec snyk -- snyk test"
+
+[tasks.fuzz-parse]
+description = "Fuzz the parser (requires nightly: rustup override set nightly)"
+run = "cargo +nightly fuzz run fuzz_parse"
+
+[tasks.fuzz-process]
+description = "Fuzz the full process pipeline (requires nightly)"
+run = "cargo +nightly fuzz run fuzz_process"
+
+[tasks.audit]
+description = "Run cargo-audit supply chain security check"
+run = "cargo audit"
+
+[tasks.completions]
+description = "Generate shell completions to ./completions/"
+run = """
+#!/usr/bin/env bash
+set -e
+mise run release
+mkdir -p completions
+target/release/ironsubst completions bash  > completions/ironsubst.bash
+target/release/ironsubst completions zsh   > completions/_ironsubst
+target/release/ironsubst completions fish  > completions/ironsubst.fish
+echo "Completions written to ./completions/"
+"""
+
+[tasks.man]
+description = "Generate man page to ./man/ironsubst.1"
+run = """
+#!/usr/bin/env bash
+set -e
+mise run release
+mkdir -p man
+target/release/ironsubst --generate-man-page > man/ironsubst.1
+echo "Man page written to ./man/ironsubst.1"
+"""
