@@ -9,6 +9,7 @@ git-cliff = "latest"
 act = "latest"
 snyk = "latest"
 "cargo:release-plz" = "latest"
+"cargo:cargo-cyclonedx" = "latest"
 gh = "latest"
 
 [tasks]
@@ -116,8 +117,14 @@ description = "Lint GitHub Actions workflows"
 run = "actionlint"
 
 [tasks.snyk-test]
-description = "Run Snyk security scan"
-run = "mise exec snyk -- snyk test"
+description = "Run Snyk security scan via CycloneDX SBOM"
+run = """
+#!/usr/bin/env bash
+set -e
+mise exec -- cargo cyclonedx -f json --override-filename sbom
+mise exec snyk -- snyk sbom test --file=sbom.json
+rm sbom.json
+"""
 
 [tasks.fuzz-parse]
 description = "Fuzz the parser (requires nightly: rustup override set nightly)"
