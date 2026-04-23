@@ -24,11 +24,7 @@ pub struct Args {
     /// Fail if a variable is not explicitly set in the environment.
     /// Fallback operators (e.g. ${X:-default}) are respected — only bare unset variables error.
     #[arg(long)]
-    require_explicit_values: bool,
-
-    /// Fail if a variable is not set AND no fallback operator is present in the expression.
-    #[arg(long)]
-    require_any_values: bool,
+    require_values: bool,
 
     /// Fail if a variable is set to an empty string (or unset with no fallback).
     #[arg(long)]
@@ -151,8 +147,7 @@ fn main() {
     }
 
     let restrictions = Restrictions {
-        require_explicit_values: args.require_explicit_values,
-        require_any_values: args.require_any_values,
+        require_values: args.require_values,
         require_nonempty_values: args.require_nonempty_values,
     };
 

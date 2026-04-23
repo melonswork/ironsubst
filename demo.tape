@@ -53,13 +53,13 @@ Type "ironsubst -- '${NOT_SET:=fallback!}'"
 Enter
 Sleep 2s
 
-Type "ironsubst --require-explicit-values -- '${NOT_SET:=fallback!}'"
+Type "ironsubst --require-values -- '${NOT_SET:=fallback!}'"
 Enter
 Sleep 2s
 
 Type "export EMPTY=''"
 Enter
-Type "ironsubst --require-explicit-values -- '${EMPTY}'"
+Type "ironsubst --require-values -- '${EMPTY}'"
 Enter
 Sleep 2s
 

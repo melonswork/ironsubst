@@ -55,11 +55,10 @@ cat config.tmpl.yaml | ironsubst > config.yaml
 
 By default, `ironsubst` will silently substitute empty strings for missing variables (just like standard bash). You can enforce strict presence with the following flags:
 
-* `--require-explicit-values` (equivalent to `-no-unset` in `a8m/envsubst`)  
+* `--require-values` (equivalent to `-no-unset` in `a8m/envsubst`)  
   Fails if a variable is not explicitly set in the environment. When a default/fallback
   operator fires (e.g. `${NOTSET:-fallback}`), that expression succeeds because the
   fallback provides a value; only a bare unset variable triggers the error.
-* `--require-any-values`  
   Fails if a variable is not set in the environment AND there is no fallback operator
   in the template expression (i.e. the variable appears as a bare `$VAR` or `${VAR}`).
 * `--require-nonempty-values`  

@@ -17,15 +17,10 @@ pub enum EvalError {
 /// Controls which missing/empty variables are treated as errors.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Restrictions {
-    /// Fail if a variable is not explicitly set in the environment.
+    /// Fail if a variable is not set in the environment.
     /// When a fallback/default operator fires (e.g. `${X:-default}`) the
     /// restriction check is skipped because a value *is* being provided.
-    pub require_explicit_values: bool,
-
-    /// Fail if a variable is not set AND there is no fallback operator in the
-    /// template expression (i.e. the variable appears as a bare `$VAR` or
-    /// `${VAR}` with no `-`/`:-`/`=`/`:=` operator).
-    pub require_any_values: bool,
+    pub require_values: bool,
 
     /// Fail if a variable is set to an empty string (or not set at all and no
     /// fallback fires).
@@ -180,15 +175,7 @@ pub fn eval_nodes(
                 if !substituted {
                     // No operator fired — we are outputting the raw variable value.
 
-                    if restrictions.require_explicit_values && !is_set {
-                        errors.push(EvalError::Unset(display_name.clone()));
-                        if fail_fast {
-                            return Err(errors);
-                        }
-                    } else if restrictions.require_any_values && !is_set && operator.is_none() {
-                        // `require_any_values` only fires for bare variables with no
-                        // fallback operator — if an operator was present but didn't fire
-                        // (e.g. `${SET-alt}`) a value is still being produced.
+                    if restrictions.require_values && !is_set {
                         errors.push(EvalError::Unset(display_name.clone()));
                         if fail_fast {
                             return Err(errors);
