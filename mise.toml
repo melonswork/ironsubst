@@ -9,6 +9,7 @@ git-cliff = "latest"
 act = "latest"
 snyk = "latest"
 "cargo:release-plz" = "latest"
+gh = "latest"
 
 [tasks]
 "run" = "cargo run --"
@@ -59,7 +60,6 @@ FILE="${1:-example.txt}"
 
 if [ ! -f "$FILE" ]; then
     echo "Error: file '$FILE' not found."
-    exit 1
 fi
 
 echo "Building ironsubst..."
@@ -106,8 +106,7 @@ run = """
 #!/usr/bin/env bash
 set -e
 if ! gh auth token &>/dev/null; then
-  echo "Not logged into GitHub. Run: gh auth login"
-  exit 1
+  gh auth login
 fi
 act -j test -s GITHUB_TOKEN=$(gh auth token)
 """
