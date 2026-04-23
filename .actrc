@@ -1,0 +1,4 @@
+--container-architecture linux/amd64
+--no-skip-checkout
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+--container-daemon-socket -
