@@ -1,0 +1,29 @@
+--- Basic Substitution (Optional Braces) ---
+$$IRONSUBST_SET              -> $IRONSUBST_SET
+$${IRONSUBST_SET}            -> ${IRONSUBST_SET}
+$$IRONSUBST_EMPTY            -> $IRONSUBST_EMPTY
+$${IRONSUBST_EMPTY}          -> ${IRONSUBST_EMPTY}
+$$IRONSUBST_UNSET            -> $IRONSUBST_UNSET
+$${IRONSUBST_UNSET}          -> ${IRONSUBST_UNSET}
+
+--- Default Values (- and :-) ---
+(Unset)    $${IRONSUBST_UNSET-default}   -> ${IRONSUBST_UNSET-default}
+(Unset)    $${IRONSUBST_UNSET:-default}  -> ${IRONSUBST_UNSET:-default}
+(Empty)    $${IRONSUBST_EMPTY-default}   -> ${IRONSUBST_EMPTY-default}
+(Empty)    $${IRONSUBST_EMPTY:-default}  -> ${IRONSUBST_EMPTY:-default}
+(Set)      $${IRONSUBST_SET-default}     -> ${IRONSUBST_SET-default}
+(Set)      $${IRONSUBST_SET:-default}    -> ${IRONSUBST_SET:-default}
+
+--- Assign/Default (= and :=) ---
+(Unset)    $${IRONSUBST_UNSET=default}   -> ${IRONSUBST_UNSET=default}
+(Unset)    $${IRONSUBST_UNSET:=default}  -> ${IRONSUBST_UNSET:=default}
+(Empty)    $${IRONSUBST_EMPTY=default}   -> ${IRONSUBST_EMPTY=default}
+(Empty)    $${IRONSUBST_EMPTY:=default}  -> ${IRONSUBST_EMPTY:=default}
+
+--- Substitute/Alternate (+ and :+) ---
+(Unset)    $${IRONSUBST_UNSET+sub}       -> ${IRONSUBST_UNSET+sub}
+(Unset)    $${IRONSUBST_UNSET:+sub}      -> ${IRONSUBST_UNSET:+sub}
+(Empty)    $${IRONSUBST_EMPTY+sub}       -> ${IRONSUBST_EMPTY+sub}
+(Empty)    $${IRONSUBST_EMPTY:+sub}      -> ${IRONSUBST_EMPTY:+sub}
+(Set)      $${IRONSUBST_SET+sub}         -> ${IRONSUBST_SET+sub}
+(Set)      $${IRONSUBST_SET:+sub}        -> ${IRONSUBST_SET:+sub}
