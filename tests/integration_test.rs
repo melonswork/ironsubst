@@ -19,6 +19,9 @@ struct ParseTest {
     has_err_no_unset: bool,
     has_err_no_empty: bool,
     has_err_strict: bool,
+    /// Expected error under `require_any_values = true` (all others false).
+    /// `None` means "same as has_err_relaxed" — avoids updating every existing test.
+    has_err_any_values: Option<bool>,
 }
 
 fn get_tests() -> Vec<ParseTest> {
@@ -31,6 +34,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "env only",
@@ -40,6 +44,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "with text",
@@ -49,6 +54,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "concatenated",
@@ -58,6 +64,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "2 env var",
@@ -67,6 +74,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "invalid var",
@@ -76,6 +84,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "invalid subst var",
@@ -85,6 +94,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "value of $var",
@@ -94,6 +104,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set -",
@@ -103,6 +114,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set =",
@@ -112,6 +124,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var set but empty -",
@@ -121,6 +134,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var set but empty =",
@@ -130,6 +144,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set or empty :-",
@@ -139,6 +154,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set or empty :=",
@@ -148,6 +164,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "if $var set evaluate expression as $other +",
@@ -157,6 +174,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             // POSIX-correct: ${VAR:+alt} fires only when VAR is set AND non-empty.
@@ -168,6 +186,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "if $var not set, use empty string +",
@@ -177,6 +196,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "if $var not set, use empty string :+",
@@ -186,6 +206,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "multi line string",
@@ -195,6 +216,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "issue #1",
@@ -204,6 +226,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "issue #2",
@@ -213,6 +236,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "gh-issue-8",
@@ -222,6 +246,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "gh-issue-41-1",
@@ -231,6 +256,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "gh-issue-41-2",
@@ -240,6 +266,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "gh-issue-41-3",
@@ -249,6 +276,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "gh-issue-41-4",
@@ -258,6 +286,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "gh-issue-43-1",
@@ -267,6 +296,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "closing brace expected",
@@ -276,6 +306,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set",
@@ -285,6 +316,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // Bare unset variable with no operator → require_any_values errors
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "$var set to empty",
@@ -294,6 +327,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "gh-issue-9",
@@ -303,6 +337,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // Bare unset variable with no operator → require_any_values errors
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "gh-issue-9-empty",
@@ -312,6 +348,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var and $DEFAULT not set -",
@@ -321,6 +358,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // Fallback fires; $ALSO_NOTSET is bare+unset → require_any_values errors
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "$var and $DEFAULT not set :-",
@@ -330,6 +369,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // Fallback fires; $ALSO_NOTSET is bare+unset → require_any_values errors
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "$var and $DEFAULT not set =",
@@ -339,6 +380,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // Fallback fires; $ALSO_NOTSET is bare+unset → require_any_values errors
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "$var and $DEFAULT not set :=",
@@ -348,6 +391,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // Fallback fires; $ALSO_NOTSET is bare+unset → require_any_values errors
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "$var and $OTHER not set +",
@@ -357,6 +402,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var and $OTHER not set :+",
@@ -366,6 +412,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var empty and $DEFAULT not set -",
@@ -375,6 +422,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var empty and $DEFAULT not set :-",
@@ -384,6 +432,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // EMPTY is empty + colon → fallback fires; $NOTSET bare+unset → error
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "$var empty and $DEFAULT not set =",
@@ -393,6 +443,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var empty and $DEFAULT not set :=",
@@ -402,6 +453,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // EMPTY is empty + colon → fallback fires; $NOTSET bare+unset → error
+            has_err_any_values: Some(true),
         },
         ParseTest {
             name: "$var empty and $OTHER not set +",
@@ -411,6 +464,8 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: true,
             has_err_no_empty: false,
             has_err_strict: true,
+            // EMPTY is set → + fires; $NOTSET is bare+unset → require_any_values errors
+            has_err_any_values: Some(true),
         },
         ParseTest {
             // POSIX-correct: EMPTY is set but empty → :+ does NOT fire →
@@ -422,6 +477,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set and $DEFAULT empty -",
@@ -431,6 +487,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set and $DEFAULT empty :-",
@@ -440,6 +497,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set and $DEFAULT empty =",
@@ -449,6 +507,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set and $DEFAULT empty :=",
@@ -458,6 +517,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set and $OTHER empty +",
@@ -467,6 +527,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var not set and $OTHER empty :+",
@@ -476,6 +537,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var and $DEFAULT empty -",
@@ -485,6 +547,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var and $DEFAULT empty :-",
@@ -494,6 +557,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var and $DEFAULT empty =",
@@ -503,6 +567,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var and $DEFAULT empty :=",
@@ -512,6 +577,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "$var and $OTHER empty +",
@@ -521,6 +587,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: true,
             has_err_strict: true,
+            has_err_any_values: None,
         },
         ParseTest {
             // POSIX-correct: EMPTY is set but empty → :+ does NOT fire →
@@ -532,6 +599,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "escape $$var",
@@ -541,6 +609,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "escape $${subst}",
@@ -550,6 +619,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "escape $$$var",
@@ -559,6 +629,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
         ParseTest {
             name: "escape $$${subst}",
@@ -568,6 +639,7 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_no_unset: false,
             has_err_no_empty: false,
             has_err_strict: false,
+            has_err_any_values: None,
         },
     ]
 }
@@ -644,5 +716,90 @@ fn test_parse_strict() {
             require_nonempty_values: true,
         },
         |t| t.has_err_strict,
+    );
+}
+
+/// `require_any_values = true` in isolation: fail only when a variable is both unset
+/// AND no fallback operator is present in the expression.
+#[test]
+fn test_parse_require_any_values() {
+    do_test(
+        Restrictions {
+            require_explicit_values: false,
+            require_any_values: true,
+            require_nonempty_values: false,
+        },
+        |t| t.has_err_any_values.unwrap_or(t.has_err_relaxed),
+    );
+}
+
+/// Dedicated `require_any_values` scenarios not already covered by the shared suite.
+#[test]
+fn test_require_any_values_dedicated() {
+    let env = get_fake_env();
+    let restrictions = Restrictions {
+        require_explicit_values: false,
+        require_any_values: true,
+        require_nonempty_values: false,
+    };
+
+    // Bare unset variable → error
+    let r = process("$NOTSET", &env, restrictions, false, false);
+    assert!(
+        r.is_err(),
+        "bare $NOTSET should error with require_any_values"
+    );
+
+    // Bare set variable → ok
+    let r = process("$BAR", &env, restrictions, false, false);
+    assert_eq!(r.unwrap(), "bar");
+
+    // Bare empty variable → ok (it IS set, just empty)
+    let r = process("$EMPTY", &env, restrictions, false, false);
+    assert_eq!(r.unwrap(), "");
+
+    // Unset variable with default operator → ok (fallback provides a value)
+    let r = process("${NOTSET:-fallback}", &env, restrictions, false, false);
+    assert_eq!(r.unwrap(), "fallback");
+
+    // Unset variable with = operator → ok (fallback provides a value)
+    let r = process("${NOTSET:=fallback}", &env, restrictions, false, false);
+    assert_eq!(r.unwrap(), "fallback");
+
+    // Unset variable with + operator → ok (+ on unset → empty string, no error)
+    let r = process("${NOTSET+alt}", &env, restrictions, false, false);
+    assert_eq!(r.unwrap(), "");
+
+    // Braced unset variable, no operator → error
+    let r = process("${NOTSET}", &env, restrictions, false, false);
+    assert!(
+        r.is_err(),
+        "braced ${{NOTSET}} should error with require_any_values"
+    );
+
+    // Multiple errors collected (fail_fast = false)
+    let r = process("$NOTSET $ALSO_NOTSET", &env, restrictions, false, false);
+    assert!(r.is_err());
+    let msg = r.unwrap_err().to_string();
+    assert!(msg.contains("$NOTSET"), "error should name $NOTSET");
+    assert!(
+        msg.contains("$ALSO_NOTSET"),
+        "error should name $ALSO_NOTSET"
+    );
+
+    // fail_fast = true stops at first error
+    let r = process("$NOTSET $ALSO_NOTSET", &env, restrictions, false, true);
+    assert!(r.is_err());
+    let msg = r.unwrap_err().to_string();
+    assert!(
+        msg.contains("$NOTSET"),
+        "fail_fast should report first error"
+    );
+    // The second variable may or may not appear depending on evaluation order;
+    // the important thing is that we got exactly one error line.
+    assert_eq!(
+        msg.lines().count(),
+        1,
+        "fail_fast should produce a single error"
     );
 }
