@@ -126,6 +126,9 @@ description = "Run Snyk security scan via CycloneDX SBOM"
 run = """
 #!/usr/bin/env bash
 set -e
+if [ -z "$SNYK_TOKEN" ]; then
+  mise exec snyk -- snyk auth
+fi
 mise exec -- cargo cyclonedx -f json --override-filename sbom
 mise exec snyk -- snyk sbom test --file=sbom.json
 rm sbom.json

@@ -99,7 +99,9 @@ jobs:
     - name: Cargo audit
       run: mise run audit
     - name: Snyk
-      run: mise run snyk-test || true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: mise run snyk-test
     - name: Summary
       if: always()
       run: |
@@ -107,7 +109,7 @@ jobs:
         echo "| Scanner | Result |" >> $GITHUB_STEP_SUMMARY
         echo "|---|---|" >> $GITHUB_STEP_SUMMARY
         echo "| cargo-audit | ✅ |" >> $GITHUB_STEP_SUMMARY
-        echo "| snyk | (run locally) |" >> $GITHUB_STEP_SUMMARY
+        echo "| snyk | ✅ |" >> $GITHUB_STEP_SUMMARY
 
   bench:
     runs-on: ubuntu-latest
