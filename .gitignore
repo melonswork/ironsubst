@@ -5,3 +5,6 @@ bench-results*.md
 /fuzz/target
 /fuzz/corpus
 /fuzz/artifacts
+
+/man
+/completions
