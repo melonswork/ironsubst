@@ -648,7 +648,7 @@ fn do_test(restrictions: Restrictions, get_err: fn(&ParseTest) -> bool) {
     let env = get_fake_env();
     for test in get_tests() {
         let has_err = get_err(&test);
-        let result = process(test.input, &env, restrictions, false, false);
+        let result = process(test.input, &env, restrictions, false, false, None);
 
         assert_eq!(
             result.is_err(),
@@ -744,41 +744,62 @@ fn test_require_any_values_dedicated() {
     };
 
     // Bare unset variable → error
-    let r = process("$NOTSET", &env, restrictions, false, false);
+    let r = process("$NOTSET", &env, restrictions, false, false, None);
     assert!(
         r.is_err(),
         "bare $NOTSET should error with require_any_values"
     );
 
     // Bare set variable → ok
-    let r = process("$BAR", &env, restrictions, false, false);
+    let r = process("$BAR", &env, restrictions, false, false, None);
     assert_eq!(r.unwrap(), "bar");
 
     // Bare empty variable → ok (it IS set, just empty)
-    let r = process("$EMPTY", &env, restrictions, false, false);
+    let r = process("$EMPTY", &env, restrictions, false, false, None);
     assert_eq!(r.unwrap(), "");
 
     // Unset variable with default operator → ok (fallback provides a value)
-    let r = process("${NOTSET:-fallback}", &env, restrictions, false, false);
+    let r = process(
+        "${NOTSET:-fallback}",
+        &env,
+        restrictions,
+        false,
+        false,
+        None,
+    );
     assert_eq!(r.unwrap(), "fallback");
 
     // Unset variable with = operator → ok (fallback provides a value)
-    let r = process("${NOTSET:=fallback}", &env, restrictions, false, false);
+    let r = process(
+        "${NOTSET:=fallback}",
+        &env,
+        restrictions,
+        false,
+        false,
+        None,
+    );
     assert_eq!(r.unwrap(), "fallback");
 
     // Unset variable with + operator → ok (+ on unset → empty string, no error)
-    let r = process("${NOTSET+alt}", &env, restrictions, false, false);
+    let r = process("${NOTSET+alt}", &env, restrictions, false, false, None);
     assert_eq!(r.unwrap(), "");
 
     // Braced unset variable, no operator → error
-    let r = process("${NOTSET}", &env, restrictions, false, false);
+    let r = process("${NOTSET}", &env, restrictions, false, false, None);
     assert!(
         r.is_err(),
         "braced ${{NOTSET}} should error with require_any_values"
     );
 
     // Multiple errors collected (fail_fast = false)
-    let r = process("$NOTSET $ALSO_NOTSET", &env, restrictions, false, false);
+    let r = process(
+        "$NOTSET $ALSO_NOTSET",
+        &env,
+        restrictions,
+        false,
+        false,
+        None,
+    );
     assert!(r.is_err());
     let msg = r.unwrap_err().to_string();
     assert!(msg.contains("$NOTSET"), "error should name $NOTSET");
@@ -788,7 +809,14 @@ fn test_require_any_values_dedicated() {
     );
 
     // fail_fast = true stops at first error
-    let r = process("$NOTSET $ALSO_NOTSET", &env, restrictions, false, true);
+    let r = process(
+        "$NOTSET $ALSO_NOTSET",
+        &env,
+        restrictions,
+        false,
+        true,
+        None,
+    );
     assert!(r.is_err());
     let msg = r.unwrap_err().to_string();
     assert!(
@@ -802,4 +830,116 @@ fn test_require_any_values_dedicated() {
         1,
         "fail_fast should produce a single error"
     );
+}
+
+#[test]
+fn test_prefix_filter() {
+    let mut env = HashMap::new();
+    env.insert("APP_HOST".to_string(), "localhost".to_string());
+    env.insert("APP_PORT".to_string(), "8080".to_string());
+    env.insert("OTHER".to_string(), "secret".to_string());
+    env.insert("EMPTY".to_string(), String::new());
+
+    let relaxed = Restrictions::default();
+
+    // Matching variable is substituted
+    let r = process("${APP_HOST}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "localhost");
+
+    // Non-matching variable is left verbatim (braced form preserved)
+    let r = process("${OTHER}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER}");
+
+    // Non-matching unbraced variable is left verbatim
+    let r = process("$OTHER", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "$OTHER");
+
+    // Mix: matching substituted, non-matching verbatim
+    let r = process(
+        "${APP_HOST}:${APP_PORT} $OTHER",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(r, "localhost:8080 $OTHER");
+
+    // Operator on matching variable works normally
+    let r = process(
+        "${APP_MISSING:-default}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(r, "default");
+
+    // Operator on non-matching variable: whole expression left verbatim
+    let r = process(
+        "${OTHER:-fallback}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(r, "${OTHER:-fallback}");
+
+    // Non-matching variable does NOT trigger restriction errors even if unset
+    let strict = Restrictions {
+        require_explicit_values: true,
+        require_any_values: true,
+        require_nonempty_values: true,
+    };
+    // UNSET_OTHER is not in env and has no APP_ prefix → verbatim, no error
+    let r = process("$UNSET_OTHER", &env, strict, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "$UNSET_OTHER");
+
+    // APP_ prefixed unset variable DOES trigger restriction errors
+    let r = process("$APP_MISSING", &env, strict, false, false, Some("APP_"));
+    assert!(
+        r.is_err(),
+        "unset APP_ var should error under strict restrictions"
+    );
+
+    // No prefix = normal behaviour (existing tests cover this, just a sanity check)
+    let r = process("${OTHER}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "secret");
+
+    // Operator fallback text reconstruction: -= :- = :=
+    let r = process("${OTHER-fb}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER-fb}");
+    let r = process("${OTHER:-fb}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER:-fb}");
+    let r = process("${OTHER=fb}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER=fb}");
+    let r = process("${OTHER:=fb}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER:=fb}");
+    let r = process("${OTHER+fb}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER+fb}");
+    let r = process("${OTHER:+fb}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER:+fb}");
+
+    // Nested: non-matching var in fallback of matching var
+    // ${APP_MISSING:-$OTHER} — APP_MISSING is unset so fallback fires,
+    // but $OTHER doesn't have APP_ prefix so it should be left verbatim inside
+    let r = process(
+        "${APP_MISSING:-$OTHER}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(r, "$OTHER");
+
+    // Empty prefix = substitute everything (same as None)
+    let r = process("${OTHER}", &env, relaxed, false, false, Some("")).unwrap();
+    assert_eq!(r, "secret");
 }

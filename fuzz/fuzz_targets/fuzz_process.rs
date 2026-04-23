@@ -21,8 +21,8 @@ fuzz_target!(|data: &[u8]| {
                         require_any_values: require_any,
                         require_nonempty_values: require_nonempty,
                     };
-                    let _ = ironsubst::process(s, &env, restrictions, false, false);
-                    let _ = ironsubst::process(s, &env, restrictions, true, true);
+                    let _ = ironsubst::process(s, &env, restrictions, false, false, None);
+                    let _ = ironsubst::process(s, &env, restrictions, true, true, None);
                 }
             }
         }

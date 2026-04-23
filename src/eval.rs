@@ -34,11 +34,16 @@ pub struct Restrictions {
 ///
 /// Returns the substituted string on success, or a list of [`EvalError`]s on
 /// failure. Errors accumulate unless `fail_fast` is set.
+///
+/// When `prefix` is `Some("FOO_")`, only variables whose names start with
+/// `"FOO_"` are substituted; all others are left verbatim in the output
+/// (e.g. `$BAR` stays as `$BAR`, `${BAR}` stays as `${BAR}`).
 pub fn eval_nodes(
     nodes: &[Node],
     env: &HashMap<String, String>,
     restrictions: Restrictions,
     fail_fast: bool,
+    prefix: Option<&str>,
 ) -> Result<String, Vec<EvalError>> {
     let mut result = String::new();
     let mut errors = Vec::new();
@@ -52,6 +57,16 @@ pub fn eval_nodes(
                 operator,
                 fallback,
             } => {
+                // If a prefix filter is active and this variable's name does not
+                // match, emit the original source text verbatim and skip all
+                // substitution and restriction checks.
+                if let Some(pfx) = prefix {
+                    if !name.starts_with(pfx) {
+                        result.push_str(&original_text(name, *braced, operator, fallback));
+                        continue;
+                    }
+                }
+
                 let value = env.get(name.as_str());
                 let is_set = value.is_some();
                 let is_empty = value.map(|s: &String| s.is_empty()).unwrap_or(true);
@@ -75,7 +90,13 @@ pub fn eval_nodes(
                         Operator::Default(colon) | Operator::Assign(colon) => {
                             if !is_set || (*colon && is_empty) {
                                 if let Some(fallback_nodes) = fallback {
-                                    match eval_nodes(fallback_nodes, env, restrictions, fail_fast) {
+                                    match eval_nodes(
+                                        fallback_nodes,
+                                        env,
+                                        restrictions,
+                                        fail_fast,
+                                        prefix,
+                                    ) {
                                         Ok(s) => result.push_str(&s),
                                         Err(mut e) => errors.append(&mut e),
                                     }
@@ -92,7 +113,13 @@ pub fn eval_nodes(
                             let fires = if *colon { is_set && !is_empty } else { is_set };
                             if fires {
                                 if let Some(fallback_nodes) = fallback {
-                                    match eval_nodes(fallback_nodes, env, restrictions, fail_fast) {
+                                    match eval_nodes(
+                                        fallback_nodes,
+                                        env,
+                                        restrictions,
+                                        fail_fast,
+                                        prefix,
+                                    ) {
                                         Ok(s) => result.push_str(&s),
                                         Err(mut e) => errors.append(&mut e),
                                     }
@@ -141,4 +168,53 @@ pub fn eval_nodes(
     } else {
         Err(errors)
     }
+}
+
+/// Reconstruct the original source text of a variable node so it can be
+/// emitted verbatim when the prefix filter rejects it.
+///
+/// This is a best-effort reconstruction: the AST does not store raw source
+/// bytes, so we rebuild the canonical form.  For the common cases (`$VAR`,
+/// `${VAR}`, `${VAR:-default}`) the output is identical to the input.
+fn original_text(
+    name: &str,
+    braced: bool,
+    operator: &Option<Operator>,
+    fallback: &Option<Vec<Node>>,
+) -> String {
+    if !braced {
+        // Unbraced variables never have operators or fallbacks.
+        return format!("${name}");
+    }
+
+    let op_str = match operator {
+        None => String::new(),
+        Some(Operator::Default(colon)) => format!("{}-", if *colon { ":" } else { "" }),
+        Some(Operator::Assign(colon)) => format!("{}=", if *colon { ":" } else { "" }),
+        Some(Operator::Substitute(colon)) => format!("{}+", if *colon { ":" } else { "" }),
+    };
+
+    let fallback_str = match fallback {
+        None => String::new(),
+        Some(nodes) => nodes_to_text(nodes),
+    };
+
+    format!("${{{name}{op_str}{fallback_str}}}")
+}
+
+/// Recursively convert AST nodes back to their source text representation.
+fn nodes_to_text(nodes: &[Node]) -> String {
+    use crate::ast::Node;
+    nodes
+        .iter()
+        .map(|n| match n {
+            Node::Text(t) => t.clone(),
+            Node::Variable {
+                name,
+                braced,
+                operator,
+                fallback,
+            } => original_text(name, *braced, operator, fallback),
+        })
+        .collect()
 }
