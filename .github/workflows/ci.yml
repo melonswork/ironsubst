@@ -26,6 +26,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
       with:
         shared-key: "ironsubst"
+        save-if: ${{ github.ref == 'refs/heads/master' }}
     - &rustup-cache
       name: Cache Rust toolchain components
       uses: actions/cache@v4
