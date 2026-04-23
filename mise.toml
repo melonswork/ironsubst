@@ -1,8 +1,11 @@
 [tools]
+envsubst = "latest"
 rust = "latest"
+hyperfine = "latest"
 
 [tasks]
 "run" = "cargo run --"
+"release" = "cargo build --release -q"
 "test" = "cargo test"
 "format:check" = "cargo fmt -- --check"
 "format:fix" = "cargo fmt"
@@ -12,3 +15,20 @@ rust = "latest"
 [tasks.example]
 run = "cargo run -q -- -i example.txt"
 env = { IRONSUBST_SET = "hello_world", IRONSUBST_EMPTY = "" }
+
+[tasks.bench]
+description = "Compare performance with a8m/envsubst"
+env = { IRONSUBST_SET = "hello_world", IRONSUBST_EMPTY = "" }
+run = """
+#!/usr/bin/env bash
+set -e
+mise run release
+hyperfine -N \\
+  --warmup 100 \\
+  --runs 2000 \\
+  --style full \\
+  --export-markdown bench-results-`date +%F_%H-%m`.md \\
+  -n "ironsubst (Rust)" "target/release/ironsubst -i example.txt" \\
+  -n "envsubst (Go)" "envsubst -i example.txt"
+cat bench-results.md
+"""
