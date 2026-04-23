@@ -1,6 +1,7 @@
 #![deny(unsafe_code)]
 
 pub mod ast;
+pub mod envfile;
 pub mod eval;
 pub mod parser;
 
