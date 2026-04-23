@@ -1,2 +1,7 @@
 /target
 bench-results*.md
+.DS_Store
+# cargo-fuzz artifacts (corpus and artifacts are generated locally, not committed)
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts
