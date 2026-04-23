@@ -5,6 +5,7 @@ hyperfine = "latest"
 hk = "latest"
 pkl = "latest"
 vhs = "latest"
+git-cliff = "latest"
 
 [tasks]
 "run" = "cargo run --"
@@ -14,6 +15,10 @@ vhs = "latest"
 "format:fix" = "cargo fmt"
 "lint:check" = "cargo clippy -- -D warnings"
 "lint:fix" = "cargo clippy --fix --allow-dirty --allow-staged"
+
+[tasks.changelog]
+description = "Generate CHANGELOG.md"
+run = "git cliff -o CHANGELOG.md"
 
 [tasks.demo]
 description = "Generate vhs demo"
