@@ -8,3 +8,5 @@ bench-results*.md
 
 /man
 /completions
+
+/comparison.md
