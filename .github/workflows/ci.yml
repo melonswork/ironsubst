@@ -24,7 +24,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.rustup/toolchains
-        key: rustup-${{ runner.os }}-${{ hashFiles('mise.toml') }}
+        key: rustup-${{ runner.os }}-${{ hashFiles('mise.lock') }}
     - &mise
       name: Setup tools with mise
       uses: jdx/mise-action@v4
