@@ -1,4 +1,5 @@
 [tools]
+python = "latest"
 envsubst = "latest"
 rust = "latest"
 hyperfine = "latest"
@@ -115,6 +116,10 @@ act -j test -s GITHUB_TOKEN=$(gh auth token)
 [tasks.lint-gha]
 description = "Lint GitHub Actions workflows"
 run = "actionlint"
+
+[tasks.compare]
+description = "Generate comparison.md table of substitution tool behavior"
+run = "python3 compare.py"
 
 [tasks.snyk-test]
 description = "Run Snyk security scan via CycloneDX SBOM"
