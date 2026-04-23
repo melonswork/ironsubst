@@ -1,7 +1,7 @@
 [tools]
 python = "latest"
 envsubst = "latest"
-rust = { version = "latest", components = ["rustfmt", "clippy"] }
+rust = { version = "latest", components = ["rustfmt", "clippy", "llvm-tools-preview"] }
 hyperfine = "latest"
 hk = "latest"
 pkl = "latest"
@@ -11,6 +11,7 @@ act = "latest"
 snyk = "latest"
 "cargo:release-plz" = "latest"
 "cargo:cargo-cyclonedx" = "latest"
+"cargo:cargo-llvm-cov" = "latest"
 gh = "latest"
 
 [tasks]
@@ -37,23 +38,41 @@ env = { IRON_SET = "hello_world", IRON_EMPTY = "" }
 [tasks.bench]
 description = "Compare performance with a8m/envsubst"
 env = { IRON_SET = "hello_world", IRON_EMPTY = "" }
+usage = '''
+flag "--warmup <n>" help="Number of warmup runs" default="100"
+flag "--runs <n>" help="Number of benchmark runs" default="2000"
+flag "--export-dir <dir>" help="Directory for result files" default="."
+flag "--no-date" help="Skip appending date to result filenames"
+'''
 run = """
 #!/usr/bin/env bash
 set -e
 mise run release
-results_file="bench-results.md"
+
+if [ "${usage_no_date:-false}" = "true" ]; then
+  SUFFIX=""
+else
+  SUFFIX="-$(date +%Y%m%d)"
+fi
+
+OUT="${usage_export_dir:?}"
+mkdir -p "$OUT"
+
 hyperfine -N \
-  --warmup 100 \
-  --runs 2000 \
+  --warmup "${usage_warmup:?}" \
+  --runs "${usage_runs:?}" \
   --style full \
-  --export-markdown "$results_file" \
-  -n "ironsubst (Rust)" "target/release/ironsubst -i example.txt" \
-  -n "envsubst (Go)" "envsubst -i example.txt"
-cat "$results_file"
+  --export-json "$OUT/bench-results${SUFFIX}.json" \
+  --export-csv "$OUT/bench-results${SUFFIX}.csv" \
+  --export-markdown "$OUT/bench-results${SUFFIX}.md" \
+  -n "ironsubst" "target/release/ironsubst -i example.txt" \
+  -n "envsubst" "envsubst -i example.txt"
+
+cat "$OUT/bench-results${SUFFIX}.md"
 """
 
 [tasks.size-compare]
-description = "Compare release binary size of ironsubst vs a8m/envsubst"
+description = "Compare release binary size of ironsubst vs a8m/envsubst (outputs markdown to stdout)"
 run = """
 #!/usr/bin/env bash
 set -e
@@ -71,9 +90,12 @@ ENVSUBST_KB=$(echo "scale=1; $ENVSUBST_SIZE / 1024" | bc)
 DIFF=$((ENVSUBST_SIZE - IRON_SIZE))
 PCT=$(echo "scale=1; $DIFF * 100 / $ENVSUBST_SIZE" | bc)
 
-echo "ironsubst:      ${IRON_KB} KB (${IRON_SIZE} bytes)"
-echo "envsubst:       ${ENVSUBST_KB} KB (${ENVSUBST_SIZE} bytes)"
-echo "ironsubst is    ${PCT}% smaller (${DIFF} bytes saved)"
+echo "### Binary size"
+echo "| Tool | Size |"
+echo "|---|---|"
+echo "| ironsubst | ${IRON_KB} KB (${IRON_SIZE} bytes) |"
+echo "| envsubst | ${ENVSUBST_KB} KB (${ENVSUBST_SIZE} bytes) |"
+echo "| ironsubst is **${PCT}% smaller** (${DIFF} bytes saved) | |"
 """
 
 [tasks.hooks]
@@ -110,12 +132,34 @@ rm sbom.json
 """
 
 [tasks.fuzz-parse]
-description = "Fuzz the parser (requires nightly: rustup override set nightly)"
-run = "cargo +nightly fuzz run fuzz_parse"
+description = "Fuzz the parser (requires nightly)"
+usage = '''
+flag "--max-total-time <secs>" help="Stop after N seconds" default="0"
+flag "--max-runs <n>" help="Stop after N iterations"
+'''
+run = """
+#!/usr/bin/env bash
+set -e
+FUZZ_ARGS=()
+[ "${usage_max_total_time:?}" != "0" ] && FUZZ_ARGS+=(-max_total_time="${usage_max_total_time?}")
+[ -n "${usage_max_runs:-}" ] && FUZZ_ARGS+=(-max_runs="${usage_max_runs?}")
+cargo +nightly fuzz run fuzz_parse -- "${FUZZ_ARGS[@]}"
+"""
 
 [tasks.fuzz-process]
 description = "Fuzz the full process pipeline (requires nightly)"
-run = "cargo +nightly fuzz run fuzz_process"
+usage = '''
+flag "--max-total-time <secs>" help="Stop after N seconds" default="0"
+flag "--max-runs <n>" help="Stop after N iterations"
+'''
+run = """
+#!/usr/bin/env bash
+set -e
+FUZZ_ARGS=()
+[ "${usage_max_total_time:?}" != "0" ] && FUZZ_ARGS+=(-max_total_time="${usage_max_total_time?}")
+[ -n "${usage_max_runs:-}" ] && FUZZ_ARGS+=(-max_runs="${usage_max_runs?}")
+cargo +nightly fuzz run fuzz_process -- "${FUZZ_ARGS[@]}"
+"""
 
 [tasks.audit]
 description = "Run cargo-audit supply chain security check"

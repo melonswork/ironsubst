@@ -52,26 +52,26 @@ jobs:
         shared-key: "ironsubst-macos"
     - name: Setup tools with mise
       uses: jdx/mise-action@v2
-    - name: Build
-      run: cargo build --release
+    - name: Build release
+      run: mise run release
     - name: Tests
-      run: cargo test
+      run: mise run test
 
   coverage:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+    - uses: actions/cache@v4
       with:
-        components: llvm-tools-preview
+        path: ~/.local/share/mise
+        key: mise-${{ hashFiles('mise.toml') }}
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: "ironsubst"
-    - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
+    - name: Setup tools with mise
+      uses: jdx/mise-action@v2
     - name: Generate coverage report
-      run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      run: mise exec -- cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
@@ -122,39 +122,10 @@ jobs:
         shared-key: "ironsubst"
     - name: Setup tools with mise
       uses: jdx/mise-action@v2
-    - name: Build release
-      run: cargo build --release
     - name: Benchmark
-      env:
-        IRON_SET: "hello_world"
-        IRON_EMPTY: ""
-      run: |
-        hyperfine -N \
-          --warmup 50 \
-          --runs 500 \
-          --style full \
-          --export-json bench-results.json \
-          --export-csv bench-results.csv \
-          --export-markdown bench-results.md \
-          -n "ironsubst" "target/release/ironsubst -i example.txt" \
-          -n "envsubst" "envsubst -i example.txt"
+      run: mise run bench -- --warmup 50 --runs 500 --no-date >> $GITHUB_STEP_SUMMARY
     - name: Size comparison
-      run: |
-        IRON_SIZE=$(wc -c < target/release/ironsubst | tr -d ' ')
-        ENVSUBST_SIZE=$(wc -c < $(which envsubst) | tr -d ' ')
-        IRON_KB=$(echo "scale=1; $IRON_SIZE / 1024" | bc)
-        ENVSUBST_KB=$(echo "scale=1; $ENVSUBST_SIZE / 1024" | bc)
-        DIFF=$((ENVSUBST_SIZE - IRON_SIZE))
-        PCT=$(echo "scale=1; $DIFF * 100 / $ENVSUBST_SIZE" | bc)
-        echo "### Binary size" > bench-results-size.md
-        echo "| Tool | Size |" >> bench-results-size.md
-        echo "|---|---|" >> bench-results-size.md
-        echo "| ironsubst | ${IRON_KB} KB |" >> bench-results-size.md
-        echo "| envsubst | ${ENVSUBST_KB} KB |" >> bench-results-size.md
-        echo "| ironsubst is **${PCT}% smaller** (${DIFF} bytes saved) | |" >> bench-results-size.md
-        cat bench-results-size.md >> bench-results.md
-    - name: Summary
-      run: cat bench-results.md >> $GITHUB_STEP_SUMMARY
+      run: mise run size-compare >> $GITHUB_STEP_SUMMARY
     - name: Upload benchmark artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -162,5 +133,4 @@ jobs:
         path: |
           bench-results.json
           bench-results.csv
-          bench-results.md
         retention-days: 90
