@@ -6,9 +6,7 @@
 # which sets: IRON_SET=hello_world  IRON_EMPTY=""
 # and leaves IRON_UNSET / IRON_UNSET_2 absent from the environment.
 #
-# To compare against a8m/envsubst, run:
-#   mise run parity-test
-# Differences are intentional and documented below.
+# Differences from a8m/envsubst are intentional and documented below.
 ##############################################################################
 
 --- Basic Substitution (Optional Braces) ---

@@ -52,52 +52,6 @@ hyperfine -N \
 cat "$results_file"
 """
 
-[tasks.parity-test]
-description = "Compare ironsubst vs a8m/envsubst output side-by-side (differences are expected and documented)"
-env = { IRON_SET = "hello_world", IRON_EMPTY = "" }
-run = """
-#!/usr/bin/env bash
-
-FILE="${1:-example.txt}"
-
-if [ ! -f "$FILE" ]; then
-    echo "Error: file '$FILE' not found."
-fi
-
-echo "Building ironsubst..."
-cargo build -q 2>&1
-
-OUT_IRON=$(mktemp)
-OUT_ENV=$(mktemp)
-trap 'rm -f "$OUT_IRON" "$OUT_ENV"' EXIT
-
-target/debug/ironsubst -i "$FILE" > "$OUT_IRON"
-envsubst -i "$FILE" > "$OUT_ENV"
-
-echo ""
-echo "================================================================"
-echo "  ironsubst vs a8m/envsubst comparison for: $FILE"
-echo "================================================================"
-echo ""
-
-if diff -u --label "a8m/envsubst" --label "ironsubst" "$OUT_ENV" "$OUT_IRON"; then
-    echo "No differences — outputs are identical for this file."
-else
-    echo ""
-    echo "----------------------------------------------------------------"
-    echo "  Known intentional divergences:"
-    echo ""
-    echo '  ${VAR:+alt}  ironsubst: POSIX-correct — fires only when VAR is'
-    echo '                           set AND non-empty.'
-    echo '               a8m:       fires whenever VAR is set (even if empty)'
-    echo '                          — this is a bug in a8m/envsubst.'
-    echo ''
-    echo '  ${VAR+alt}   both tools agree: fires whenever VAR is set (even'
-    echo '                                  if empty).'
-    echo "----------------------------------------------------------------"
-fi
-"""
-
 [tasks.hooks]
 description = "Install hk git hooks (run once after cloning)"
 run = "hk install"
