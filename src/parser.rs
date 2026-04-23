@@ -48,6 +48,9 @@ impl<'a> Parser<'a> {
                 let start_pos = self.pos;
                 self.next(); // consume '$'
 
+                // Collapsing into `if self.peek() == Some('$')` would silently
+                // consume the `$` even when `peek()` returns `None`, and loses
+                // the explicit `next_c` binding used by both conditions.
                 #[allow(clippy::collapsible_if)]
                 if let Some(next_c) = self.peek() {
                     if next_c == '$' {
@@ -81,6 +84,9 @@ impl<'a> Parser<'a> {
                 if is_braced {
                     let mut operator = None;
 
+                    // Keep the two-level `if` for readability: the outer check
+                    // guards against end-of-input, the inner check tests the
+                    // specific character.  Collapsing them obscures the logic.
                     #[allow(clippy::collapsible_if)]
                     if let Some(op_char) = self.peek() {
                         if op_char != '}' {
@@ -129,6 +135,7 @@ impl<'a> Parser<'a> {
 
                     nodes.push(Node::Variable {
                         name,
+                        braced: true,
                         operator,
                         fallback: if fallback.is_empty() {
                             None
@@ -139,6 +146,7 @@ impl<'a> Parser<'a> {
                 } else {
                     nodes.push(Node::Variable {
                         name,
+                        braced: false,
                         operator: None,
                         fallback: None,
                     });

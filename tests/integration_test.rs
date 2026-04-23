@@ -159,9 +159,11 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_strict: false,
         },
         ParseTest {
+            // POSIX-correct: ${VAR:+alt} fires only when VAR is set AND non-empty.
+            // EMPTY is set but empty → :+ does NOT fire → result is "".
             name: "if $var set evaluate expression as $other :+",
             input: "${EMPTY:+hello}",
-            expected: "hello",
+            expected: "",
             has_err_relaxed: false,
             has_err_no_unset: false,
             has_err_no_empty: false,
@@ -411,13 +413,15 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_strict: true,
         },
         ParseTest {
+            // POSIX-correct: EMPTY is set but empty → :+ does NOT fire →
+            // $NOTSET is never evaluated → no error regardless of restrictions.
             name: "$var empty and $OTHER not set :+",
             input: "${EMPTY:+$NOTSET}",
             expected: "",
             has_err_relaxed: false,
-            has_err_no_unset: true,
+            has_err_no_unset: false,
             has_err_no_empty: false,
-            has_err_strict: true,
+            has_err_strict: false,
         },
         ParseTest {
             name: "$var not set and $DEFAULT empty -",
@@ -519,13 +523,15 @@ fn get_tests() -> Vec<ParseTest> {
             has_err_strict: true,
         },
         ParseTest {
+            // POSIX-correct: EMPTY is set but empty → :+ does NOT fire →
+            // $ALSO_EMPTY is never evaluated → no error regardless of restrictions.
             name: "$var and $OTHER empty :+",
             input: "${EMPTY:+$ALSO_EMPTY}",
             expected: "",
             has_err_relaxed: false,
             has_err_no_unset: false,
-            has_err_no_empty: true,
-            has_err_strict: true,
+            has_err_no_empty: false,
+            has_err_strict: false,
         },
         ParseTest {
             name: "escape $$var",
