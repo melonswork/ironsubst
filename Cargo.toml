@@ -5,6 +5,31 @@ edition = "2024"
 # Rust 2024 edition requires 1.85+; declare explicitly so `cargo install` gives
 # a clear error on older toolchains instead of a cryptic compile failure.
 rust-version = "1.85"
+description = "Environment variable substitution — faster, stricter, POSIX-correct"
+license = "MIT"
+repository = "https://github.com/melonswork/ironsubst"
+homepage = "https://github.com/melonswork/ironsubst"
+keywords = ["envsubst", "env", "template", "substitution", "posix"]
+categories = ["command-line-utilities", "template-engine"]
+exclude = [
+    ".actrc",
+    ".cargo_vcs_info.json",
+    ".github/",
+    ".gitignore",
+    "Cargo.toml.orig",
+    "Dockerfile",
+    "cliff.toml",
+    "codecov.yml",
+    "compare.py",
+    "comparison.md",
+    "demo.gif",
+    "demo.tape",
+    "example.txt",
+    "hk.pkl",
+    "mise.toml",
+    "renovate.json",
+    "fuzz/",
+]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
