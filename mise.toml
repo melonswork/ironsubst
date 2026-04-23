@@ -188,3 +188,55 @@ mkdir -p man
 target/release/ironsubst --generate-man-page > man/ironsubst.1
 echo "Man page written to ./man/ironsubst.1"
 """
+
+[tasks.install]
+description = "Build, install binary + man page + completions for current shell"
+run = """
+#!/usr/bin/env bash
+set -e
+
+echo "Building release..."
+cargo build --release -q
+
+BIN="$HOME/.local/bin"
+MAN="$HOME/.local/share/man/man1"
+mkdir -p "$BIN" "$MAN"
+
+echo "Installing binary to $BIN/ironsubst"
+cp target/release/ironsubst "$BIN/ironsubst"
+
+echo "Installing man page to $MAN/ironsubst.1"
+target/release/ironsubst --generate-man-page > "$MAN/ironsubst.1"
+
+SHELL_NAME="$(basename "${SHELL:-bash}")"
+case "$SHELL_NAME" in
+  bash)
+    DEST="$HOME/.local/share/bash-completion/completions"
+    mkdir -p "$DEST"
+    target/release/ironsubst completions bash > "$DEST/ironsubst"
+    echo "Installed bash completions to $DEST/ironsubst"
+    ;;
+  zsh)
+    DEST="$HOME/.local/share/zsh/site-functions"
+    mkdir -p "$DEST"
+    target/release/ironsubst completions zsh > "$DEST/_ironsubst"
+    echo "Installed zsh completions to $DEST/_ironsubst"
+    ;;
+  fish)
+    DEST="$HOME/.config/fish/completions"
+    mkdir -p "$DEST"
+    target/release/ironsubst completions fish > "$DEST/ironsubst.fish"
+    echo "Installed fish completions to $DEST/ironsubst.fish"
+    ;;
+  *)
+    echo "Skipped completions (unknown shell: $SHELL_NAME)"
+    echo "Run manually:"
+    echo "  ironsubst completions bash > ..."
+    echo "  ironsubst completions zsh  > ..."
+    echo "  ironsubst completions fish > ..."
+    ;;
+esac
+
+echo ""
+echo "Installed ironsubst. Make sure $HOME/.local/bin is in your PATH."
+"""
