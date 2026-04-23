@@ -23,12 +23,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
-      - name: Setup tools with mise
-        uses: jdx/mise-action@v4
-
-      - name: Trust mise config
-        run: mise trust --all
-
       - name: Create or update release PR
         uses: release-plz/action@v0.5
         with:
