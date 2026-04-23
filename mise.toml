@@ -2,6 +2,7 @@
 envsubst = "latest"
 rust = "latest"
 hyperfine = "latest"
+hk = "latest"
 
 [tasks]
 "run" = "cargo run --"
@@ -23,12 +24,47 @@ run = """
 #!/usr/bin/env bash
 set -e
 mise run release
-hyperfine -N \\
-  --warmup 100 \\
-  --runs 2000 \\
-  --style full \\
-  --export-markdown bench-results-`date +%F_%H-%m`.md \\
-  -n "ironsubst (Rust)" "target/release/ironsubst -i example.txt" \\
+results_file="bench-results.md"
+hyperfine -N \
+  --warmup 100 \
+  --runs 2000 \
+  --style full \
+  --export-markdown "$results_file" \
+  -n "ironsubst (Rust)" "target/release/ironsubst -i example.txt" \
   -n "envsubst (Go)" "envsubst -i example.txt"
-cat bench-results.md
+cat "$results_file"
+"""
+
+[tasks.parity-test]
+description = "Verify that ironsubst and a8m/envsubst produce identical output"
+env = { IRONSUBST_SET = "hello_world", IRONSUBST_EMPTY = "" }
+run = """
+#!/usr/bin/env bash
+set -e
+
+FILE="${1:-example.txt}"
+
+if [ ! -f "$FILE" ]; then
+    echo "Error: file '$FILE' not found."
+    exit 1
+fi
+
+echo "Building ironsubst..."
+cargo build -q
+
+OUT_MEL=$(mktemp)
+OUT_ENV=$(mktemp)
+
+target/debug/ironsubst -i "$FILE" > "$OUT_MEL"
+envsubst -i "$FILE" > "$OUT_ENV"
+
+if diff -u "$OUT_ENV" "$OUT_MEL"; then
+    echo "✅ Parity test passed! Both tools produced identical output for '$FILE'."
+else
+    echo "❌ Parity test failed! Outputs differ for '$FILE'."
+    rm -f "$OUT_MEL" "$OUT_ENV"
+    exit 1
+fi
+
+rm -f "$OUT_MEL" "$OUT_ENV"
 """
