@@ -133,3 +133,28 @@ jobs:
           bench-results.json
           bench-results.csv
         retention-days: 90
+
+  final:
+    needs: [test, test-macos, coverage, security-audit, bench]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    if: always()
+    steps:
+    - name: Check all jobs passed
+      run: |
+        results=(
+          "test=${{ needs.test.result }}"
+          "test-macos=${{ needs.test-macos.result }}"
+          "coverage=${{ needs.coverage.result }}"
+          "security-audit=${{ needs.security-audit.result }}"
+          "bench=${{ needs.bench.result }}"
+        )
+        failed=0
+        for r in "${results[@]}"; do
+          name="${r%%=*}"; result="${r##*=}"
+          if [ "$result" != "success" ]; then
+            echo "$name: $result"
+            failed=1
+          fi
+        done
+        [ $failed -eq 0 ] && echo "All jobs passed" || exit 1
