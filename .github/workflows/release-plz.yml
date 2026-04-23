@@ -19,13 +19,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup tools with mise
+        uses: jdx/mise-action@v2
 
       - name: Run release-plz
-        uses: release-plz/action@v0.5
-        with:
-          command: release-pr
+        run: release-plz release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
