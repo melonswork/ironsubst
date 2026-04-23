@@ -1,7 +1,11 @@
 [tools]
 python = "latest"
 envsubst = "latest"
-rust = { version = "latest", components = ["rustfmt", "clippy", "llvm-tools-preview"] }
+rust = { version = "latest", components = [
+  "rustfmt",
+  "clippy",
+  "llvm-tools-preview",
+] }
 hyperfine = "latest"
 hk = "latest"
 pkl = "latest"
@@ -13,11 +17,13 @@ snyk = "latest"
 "cargo:cargo-cyclonedx" = "latest"
 "cargo:cargo-llvm-cov" = "latest"
 gh = "latest"
+"cargo:cargo-audit" = "latest"
 
 [tasks]
 "run" = "cargo run --"
 "release" = "cargo build --release -q"
 "test" = "cargo test"
+"coverage" = "cargo llvm-cov --workspace --lcov --output-path lcov.info"
 "format:check" = "cargo fmt -- --check"
 "format:fix" = "cargo fmt"
 "lint:check" = "cargo clippy -- -D warnings"
@@ -120,6 +126,19 @@ run = "actionlint"
 [tasks.compare]
 description = "Generate comparison.md table of substitution tool behavior"
 run = "python3 compare.py"
+
+[tasks.renovate]
+description = "Dry-run Renovate locally against the repo"
+run = """
+  #!/usr/bin/env bash
+  set -e
+  TOKEN="${RENOVATE_TOKEN:-$(gh auth token)}"
+  LOG_LEVEL=debug RENOVATE_TOKEN="$TOKEN" \
+    npx --yes renovate \
+      --dry-run \
+      --platform github \
+      melonswork/ironsubst
+  """
 
 [tasks.snyk-test]
 description = "Run Snyk security scan via CycloneDX SBOM"

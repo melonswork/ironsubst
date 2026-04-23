@@ -29,5 +29,13 @@
   "dockerfile": {
     "enabled": true
   },
-  "schedule": ["before 6am on monday"]
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "schedule": ["before 6am on monday"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "labels": ["dependencies"]
+  }
 }

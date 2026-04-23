@@ -10,19 +10,37 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  mise-cache:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: ~/.local/share/mise
-        key: mise-${{ hashFiles('mise.toml') }}
-    - uses: Swatinem/rust-cache@v2
+    - &checkout
+      uses: actions/checkout@v6
+    - &rust-cache
+      uses: Swatinem/rust-cache@v2
       with:
         shared-key: "ironsubst"
-    - name: Setup tools with mise
-      uses: jdx/mise-action@v2
+    - &rustup-cache
+      name: Cache Rust toolchain components
+      uses: actions/cache@v4
+      with:
+        path: ~/.rustup/toolchains
+        key: rustup-${{ runner.os }}-${{ hashFiles('mise.toml') }}
+    - &mise
+      name: Setup tools with mise
+      uses: jdx/mise-action@v4
+    - &rust-components # workaround for https://github.com/jdx/mise-action/issues/184 - locally, mise does well without it
+      name: Install Rust components
+      run: rustup component add rustfmt clippy llvm-tools-preview
+
+  test:
+    needs: mise-cache
+    runs-on: ubuntu-latest
+    steps:
+    - *checkout
+    - *rust-cache
+    - *rustup-cache
+    - *mise
+    - *rust-components
     - name: Format check
       run: |
         mise run format:check
@@ -30,97 +48,75 @@ jobs:
     - name: Clippy
       run: |
         mise run lint:check
-        echo "- Clippy ✅" >> $GITHUB_STEP_SUMMARY
-    - name: Tests
+    - &test
+      name: Tests
       run: |
         mise run test
-        echo "- Tests ✅" >> $GITHUB_STEP_SUMMARY
 
   test-macos:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: ~/.local/share/mise
-        key: mise-macos-${{ hashFiles('mise.toml') }}
+    - *checkout
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: "ironsubst-macos"
-    - name: Setup tools with mise
-      uses: jdx/mise-action@v2
+    - *rustup-cache
+    - *mise
+    - *rust-components
     - name: Build release
       run: mise run release
-    - name: Tests
-      run: mise run test
+    - *test
 
   coverage:
+    needs: mise-cache
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: ~/.local/share/mise
-        key: mise-${{ hashFiles('mise.toml') }}
-    - uses: Swatinem/rust-cache@v2
-      with:
-        shared-key: "ironsubst"
-    - name: Setup tools with mise
-      uses: jdx/mise-action@v2
+    - *checkout
+    - *rust-cache
+    - *rustup-cache
+    - *mise
+    - *rust-components
     - name: Generate coverage report
-      run: mise exec -- cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      run: mise run coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: lcov.info
-        fail_ci_if_error: false
-      continue-on-error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
     - name: Summary
       run: echo "Coverage uploaded to [Codecov](https://app.codecov.io/gh/melonswork/ironsubst)" >> $GITHUB_STEP_SUMMARY
 
   security-audit:
+    needs: mise-cache
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: ~/.local/share/mise
-        key: mise-${{ hashFiles('mise.toml') }}
-    - uses: Swatinem/rust-cache@v2
-      with:
-        shared-key: "ironsubst"
-    - name: Setup tools with mise
-      uses: jdx/mise-action@v2
+    - *checkout
+    - *rust-cache
+    - *rustup-cache
+    - *mise
     - name: Cargo audit
-      run: |
-        mise run audit
-        echo "- cargo-audit ✅" >> $GITHUB_STEP_SUMMARY
+      run: mise run audit
     - name: Snyk
+      if: github.repository_owner == 'melonswork' # forks won't have the token
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       run: |
         mise run snyk-test
-        echo "- snyk ✅" >> $GITHUB_STEP_SUMMARY
 
   bench:
+    needs: mise-cache
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/cache@v4
-      with:
-        path: ~/.local/share/mise
-        key: mise-${{ hashFiles('mise.toml') }}
-    - uses: Swatinem/rust-cache@v2
-      with:
-        shared-key: "ironsubst"
-    - name: Setup tools with mise
-      uses: jdx/mise-action@v2
+    - *checkout
+    - *rust-cache
+    - *rustup-cache
+    - *mise
     - name: Benchmark
-      run: mise run bench -- --warmup 50 --runs 500 --no-date >> $GITHUB_STEP_SUMMARY
+      run: mise run bench -- --no-date >> $GITHUB_STEP_SUMMARY
     - name: Size comparison
       run: mise run size-compare >> $GITHUB_STEP_SUMMARY
     - name: Upload benchmark artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: bench-results
         path: |
