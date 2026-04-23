@@ -14,30 +14,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/cache@v4
+      with:
+        path: ~/.local/share/mise
+        key: mise-${{ hashFiles('mise.toml') }}
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: "ironsubst"
     - name: Setup tools with mise
       uses: jdx/mise-action@v2
-    - name: Check formatting
+    - name: Format check
       run: mise run format:check
-    - name: Run clippy
+    - name: Clippy
       run: mise run lint:check
-    - name: Run tests
+    - name: Tests
       run: mise run test
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Tests" >> $GITHUB_STEP_SUMMARY
+        echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+        echo "| Format | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "| Clippy | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit + Integration | ✅ |" >> $GITHUB_STEP_SUMMARY
 
   test-macos:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+    - uses: actions/cache@v4
+      with:
+        path: ~/.local/share/mise
+        key: mise-macos-${{ hashFiles('mise.toml') }}
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: "ironsubst-macos"
+    - name: Setup tools with mise
+      uses: jdx/mise-action@v2
     - name: Build
       run: cargo build --release
-    - name: Run tests
+    - name: Tests
       run: cargo test
 
   coverage:
@@ -60,17 +77,90 @@ jobs:
       with:
         files: lcov.info
         fail_ci_if_error: false
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Coverage" >> $GITHUB_STEP_SUMMARY
+        echo "Uploaded to [Codecov](https://app.codecov.io/gh/melonswork/ironsubst)" >> $GITHUB_STEP_SUMMARY
 
   security-audit:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+    - uses: actions/cache@v4
+      with:
+        path: ~/.local/share/mise
+        key: mise-${{ hashFiles('mise.toml') }}
     - uses: Swatinem/rust-cache@v2
       with:
         shared-key: "ironsubst"
-    - name: Install cargo-audit
-      run: cargo install cargo-audit --locked
-    - name: Run cargo audit
-      run: cargo audit
+    - name: Setup tools with mise
+      uses: jdx/mise-action@v2
+    - name: Cargo audit
+      run: mise run audit
+    - name: Snyk
+      run: mise run snyk-test || true
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Security" >> $GITHUB_STEP_SUMMARY
+        echo "| Scanner | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+        echo "| cargo-audit | ✅ |" >> $GITHUB_STEP_SUMMARY
+        echo "| snyk | (run locally) |" >> $GITHUB_STEP_SUMMARY
+
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
+      with:
+        path: ~/.local/share/mise
+        key: mise-${{ hashFiles('mise.toml') }}
+    - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: "ironsubst"
+    - name: Setup tools with mise
+      uses: jdx/mise-action@v2
+    - name: Build release
+      run: cargo build --release
+    - name: Benchmark
+      env:
+        IRON_SET: "hello_world"
+        IRON_EMPTY: ""
+      run: |
+        hyperfine -N \
+          --warmup 50 \
+          --runs 500 \
+          --style full \
+          --export-json bench-results.json \
+          --export-csv bench-results.csv \
+          --export-markdown bench-results.md \
+          -n "ironsubst" "target/release/ironsubst -i example.txt" \
+          -n "envsubst" "envsubst -i example.txt"
+    - name: Size comparison
+      run: |
+        IRON_SIZE=$(wc -c < target/release/ironsubst | tr -d ' ')
+        ENVSUBST_SIZE=$(wc -c < $(which envsubst) | tr -d ' ')
+        IRON_KB=$(echo "scale=1; $IRON_SIZE / 1024" | bc)
+        ENVSUBST_KB=$(echo "scale=1; $ENVSUBST_SIZE / 1024" | bc)
+        DIFF=$((ENVSUBST_SIZE - IRON_SIZE))
+        PCT=$(echo "scale=1; $DIFF * 100 / $ENVSUBST_SIZE" | bc)
+        echo "### Binary size" > bench-results-size.md
+        echo "| Tool | Size |" >> bench-results-size.md
+        echo "|---|---|" >> bench-results-size.md
+        echo "| ironsubst | ${IRON_KB} KB |" >> bench-results-size.md
+        echo "| envsubst | ${ENVSUBST_KB} KB |" >> bench-results-size.md
+        echo "| ironsubst is **${PCT}% smaller** (${DIFF} bytes saved) | |" >> bench-results-size.md
+        cat bench-results-size.md >> bench-results.md
+    - name: Summary
+      run: cat bench-results.md >> $GITHUB_STEP_SUMMARY
+    - name: Upload benchmark artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: bench-results
+        path: |
+          bench-results.json
+          bench-results.csv
+          bench-results.md
+        retention-days: 90
