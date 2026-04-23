@@ -12,6 +12,8 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+  MISE_LOCKFILE: 1
 
 jobs:
   mise-cache:
