@@ -115,6 +115,11 @@ impl<'a> Parser<'a> {
                                         operator = Some(Operator::Substitute(colon));
                                         valid_op = true;
                                     }
+                                    '?' => {
+                                        self.next();
+                                        operator = Some(Operator::Error(colon));
+                                        valid_op = true;
+                                    }
                                     _ => {}
                                 }
                             }

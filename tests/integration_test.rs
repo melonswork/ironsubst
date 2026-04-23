@@ -943,3 +943,92 @@ fn test_prefix_filter() {
     let r = process("${OTHER}", &env, relaxed, false, false, Some("")).unwrap();
     assert_eq!(r, "secret");
 }
+#[test]
+fn test_error_operator() {
+    let mut env = std::collections::HashMap::new();
+    env.insert("SET".to_string(), "yes".to_string());
+    env.insert("EMPTY".to_string(), "".to_string());
+
+    // ? on unset
+    let err = process(
+        "${UNSET?custom error msg}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(err.to_string(), "UNSET: custom error msg");
+
+    // :? on unset
+    let err = process(
+        "${UNSET:?custom error msg}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(err.to_string(), "UNSET: custom error msg");
+
+    // ? on empty
+    let res = process(
+        "${EMPTY?custom error msg}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap();
+    assert_eq!(res, ""); // succeeds because it's set
+
+    // :? on empty
+    let err = process(
+        "${EMPTY:?custom error msg}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(err.to_string(), "EMPTY: custom error msg");
+
+    // ? on set
+    let res = process(
+        "${SET?custom error msg}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap();
+    assert_eq!(res, "yes");
+
+    // default messages
+    let err = process(
+        "${UNSET?}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(err.to_string(), "UNSET: parameter not set");
+
+    let err = process(
+        "${EMPTY:?}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(err.to_string(), "EMPTY: parameter null or not set");
+}

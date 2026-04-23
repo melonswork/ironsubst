@@ -10,6 +10,8 @@ pub enum EvalError {
     Unset(String),
     #[error("variable {0} set but empty")]
     Empty(String),
+    #[error("{0}: {1}")]
+    Custom(String, String),
 }
 
 /// Controls which missing/empty variables are treated as errors.
@@ -127,6 +129,51 @@ pub fn eval_nodes(
                             }
                             substituted = true;
                         }
+                        // Error (`?`, `:?`): exit with an error message when the
+                        // variable is unset (or empty for the colon form).
+                        Operator::Error(colon) => {
+                            if !is_set || (*colon && is_empty) {
+                                let mut err_msg = String::new();
+                                if let Some(fallback_nodes) = fallback {
+                                    match eval_nodes(
+                                        fallback_nodes,
+                                        env,
+                                        restrictions,
+                                        fail_fast,
+                                        prefix,
+                                    ) {
+                                        Ok(s) => err_msg = s,
+                                        Err(mut e) => errors.append(&mut e),
+                                    }
+                                }
+
+                                if err_msg.is_empty() {
+                                    err_msg = if *colon {
+                                        "parameter null or not set".to_string()
+                                    } else {
+                                        "parameter not set".to_string()
+                                    };
+                                }
+
+                                // Bash omits braces from the parameter name in the error output
+                                let unbraced_name = display_name
+                                    .trim_start_matches("${")
+                                    .trim_start_matches('$')
+                                    .trim_end_matches('}');
+                                errors.push(EvalError::Custom(unbraced_name.to_string(), err_msg));
+
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            } else if let Some(v) = value {
+                                result.push_str(v);
+                            }
+
+                            // `?` either errors or explicitly substitutes the original value.
+                            // Set `substituted = true` so the default value logic is bypassed,
+                            // preventing duplicate error messages from strictness flags.
+                            substituted = true;
+                        }
                     }
                 }
 
@@ -192,6 +239,7 @@ fn original_text(
         Some(Operator::Default(colon)) => format!("{}-", if *colon { ":" } else { "" }),
         Some(Operator::Assign(colon)) => format!("{}=", if *colon { ":" } else { "" }),
         Some(Operator::Substitute(colon)) => format!("{}+", if *colon { ":" } else { "" }),
+        Some(Operator::Error(colon)) => format!("{}?", if *colon { ":" } else { "" }),
     };
 
     let fallback_str = match fallback {

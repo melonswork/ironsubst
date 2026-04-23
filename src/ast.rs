@@ -3,6 +3,7 @@ pub enum Operator {
     Default(bool),    // -, :- (bool is true if it has colon)
     Assign(bool),     // =, :=
     Substitute(bool), // +, :+
+    Error(bool),      // ?, :?
 }
 
 #[derive(Debug, PartialEq, Clone)]

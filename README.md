@@ -13,6 +13,7 @@ A blazing fast, deeply configurable environment variable substitution tool writt
   - `${VAR:-default}` and `${VAR-default}` (Default values)
   - `${VAR:=default}` and `${VAR=default}` (Assign defaults — note: unlike real bash, the value is *not* written back to the environment; only the output is affected)
   - `${VAR:+sub}` and `${VAR+sub}` (Alternate/Substitute — POSIX-correct: `:+` fires only when VAR is set *and* non-empty)
+  - `${VAR:?msg}` and `${VAR?msg}` (Error — exit with custom message if VAR is unset/empty; `a8m/envsubst` doesn't support this)
 - **Granular Strictness**: Control exactly what missing or empty variables are allowed using new CLI flags.
 - **Multiple Inputs**: Read from files, `stdin`, or explicit string arguments.
 - **Fast and Safe**: Powered by Rust, memory-safe, zero `unsafe` code, standalone binary.
