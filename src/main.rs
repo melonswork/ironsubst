@@ -3,6 +3,7 @@ use ironsubst::{eval::Restrictions, process};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read, Write};
+use std::path::Path;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Environment variables substitution", long_about = None)]
@@ -73,11 +74,20 @@ fn main() {
     ) {
         Ok(result) => {
             if let Some(output_file) = args.output {
-                let mut file = File::create(&output_file).unwrap_or_else(|e| {
-                    eprintln!("Error creating output file {}: {}", output_file, e);
+                // Write atomically: write to a temp file in the same directory,
+                // then rename() it over the destination. On POSIX this is atomic,
+                // so a kill/OOM/disk-full mid-write cannot leave a partial file.
+                let dest = Path::new(&output_file);
+                let dir = dest.parent().unwrap_or_else(|| Path::new("."));
+                let mut tmp = tempfile::NamedTempFile::new_in(dir).unwrap_or_else(|e| {
+                    eprintln!("Error creating temp file near {}: {}", output_file, e);
                     std::process::exit(1);
                 });
-                file.write_all(result.as_bytes()).unwrap_or_else(|e| {
+                tmp.write_all(result.as_bytes()).unwrap_or_else(|e| {
+                    eprintln!("Error writing to temp file: {}", e);
+                    std::process::exit(1);
+                });
+                tmp.persist(dest).unwrap_or_else(|e| {
                     eprintln!("Error writing to output file {}: {}", output_file, e);
                     std::process::exit(1);
                 });
