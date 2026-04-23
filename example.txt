@@ -1,29 +1,73 @@
+##############################################################################
+# ironsubst example.txt
+#
+# Run with:
+#   mise run example
+# which sets: IRONSUBST_SET=hello_world  IRONSUBST_EMPTY=""
+# and leaves IRONSUBST_UNSET / IRONSUBST_UNSET_2 absent from the environment.
+#
+# To compare against a8m/envsubst, run:
+#   mise run parity-test
+# Differences are intentional and documented below.
+##############################################################################
+
 --- Basic Substitution (Optional Braces) ---
-$$IRONSUBST_SET              -> $IRONSUBST_SET
-$${IRONSUBST_SET}            -> ${IRONSUBST_SET}
-$$IRONSUBST_EMPTY            -> $IRONSUBST_EMPTY
-$${IRONSUBST_EMPTY}          -> ${IRONSUBST_EMPTY}
-$$IRONSUBST_UNSET            -> $IRONSUBST_UNSET
-$${IRONSUBST_UNSET}          -> ${IRONSUBST_UNSET}
+$IRONSUBST_SET              -> $IRONSUBST_SET
+${IRONSUBST_SET}            -> ${IRONSUBST_SET}
+$IRONSUBST_EMPTY            -> $IRONSUBST_EMPTY
+${IRONSUBST_EMPTY}          -> ${IRONSUBST_EMPTY}
+$IRONSUBST_UNSET            -> $IRONSUBST_UNSET
+${IRONSUBST_UNSET}          -> ${IRONSUBST_UNSET}
 
 --- Default Values (- and :-) ---
-(Unset)    $${IRONSUBST_UNSET-default}   -> ${IRONSUBST_UNSET-default}
-(Unset)    $${IRONSUBST_UNSET:-default}  -> ${IRONSUBST_UNSET:-default}
-(Empty)    $${IRONSUBST_EMPTY-default}   -> ${IRONSUBST_EMPTY-default}
-(Empty)    $${IRONSUBST_EMPTY:-default}  -> ${IRONSUBST_EMPTY:-default}
-(Set)      $${IRONSUBST_SET-default}     -> ${IRONSUBST_SET-default}
-(Set)      $${IRONSUBST_SET:-default}    -> ${IRONSUBST_SET:-default}
+# Both tools agree on this section.
+(Unset)    ${IRONSUBST_UNSET-default}   -> ${IRONSUBST_UNSET-default}
+(Unset)    ${IRONSUBST_UNSET:-default}  -> ${IRONSUBST_UNSET:-default}
+(Empty)    ${IRONSUBST_EMPTY-default}   -> ${IRONSUBST_EMPTY-default}
+(Empty)    ${IRONSUBST_EMPTY:-default}  -> ${IRONSUBST_EMPTY:-default}
+(Set)      ${IRONSUBST_SET-default}     -> ${IRONSUBST_SET-default}
+(Set)      ${IRONSUBST_SET:-default}    -> ${IRONSUBST_SET:-default}
 
 --- Assign/Default (= and :=) ---
-(Unset)    $${IRONSUBST_UNSET=default}   -> ${IRONSUBST_UNSET=default}
-(Unset)    $${IRONSUBST_UNSET:=default}  -> ${IRONSUBST_UNSET:=default}
-(Empty)    $${IRONSUBST_EMPTY=default}   -> ${IRONSUBST_EMPTY=default}
-(Empty)    $${IRONSUBST_EMPTY:=default}  -> ${IRONSUBST_EMPTY:=default}
+# Both tools agree. Note: := does NOT actually assign to the environment;
+# it only outputs the default value (documented limitation).
+(Unset)    ${IRONSUBST_UNSET=default}   -> ${IRONSUBST_UNSET=default}
+(Unset)    ${IRONSUBST_UNSET:=default}  -> ${IRONSUBST_UNSET:=default}
+(Empty)    ${IRONSUBST_EMPTY=default}   -> ${IRONSUBST_EMPTY=default}
+(Empty)    ${IRONSUBST_EMPTY:=default}  -> ${IRONSUBST_EMPTY:=default}
 
 --- Substitute/Alternate (+ and :+) ---
-(Unset)    $${IRONSUBST_UNSET+sub}       -> ${IRONSUBST_UNSET+sub}
-(Unset)    $${IRONSUBST_UNSET:+sub}      -> ${IRONSUBST_UNSET:+sub}
-(Empty)    $${IRONSUBST_EMPTY+sub}       -> ${IRONSUBST_EMPTY+sub}
-(Empty)    $${IRONSUBST_EMPTY:+sub}      -> ${IRONSUBST_EMPTY:+sub}
-(Set)      $${IRONSUBST_SET+sub}         -> ${IRONSUBST_SET+sub}
-(Set)      $${IRONSUBST_SET:+sub}        -> ${IRONSUBST_SET:+sub}
+# + fires when variable is set (even if empty).      Both tools agree.
+# :+ fires when variable is set AND non-empty.       ironsubst is POSIX-correct;
+#                                                    a8m/envsubst treats :+ as +
+#                                                    (their bug).
+#
+# DIVERGENCE on lines marked [DIVERGES]:
+#
+(Unset)    ${IRONSUBST_UNSET+sub}       -> ${IRONSUBST_UNSET+sub}
+(Unset)    ${IRONSUBST_UNSET:+sub}      -> ${IRONSUBST_UNSET:+sub}
+(Empty)    ${IRONSUBST_EMPTY+sub}       -> ${IRONSUBST_EMPTY+sub}
+(Empty)    ${IRONSUBST_EMPTY:+sub}      -> ${IRONSUBST_EMPTY:+sub}   [DIVERGES: ironsubst="", a8m="sub"]
+(Set)      ${IRONSUBST_SET+sub}         -> ${IRONSUBST_SET+sub}
+(Set)      ${IRONSUBST_SET:+sub}        -> ${IRONSUBST_SET:+sub}
+
+--- Nested Placeholders ---
+# ironsubst resolves nested ${...} expressions in fallback values.
+# a8m/envsubst does NOT support nesting — it produces malformed output.
+#
+# DIVERGES: a8m outputs truncated/broken results for all lines below.
+#
+# Unset outer, set inner:
+${IRONSUBST_UNSET:-${IRONSUBST_SET}}
+# Unset outer, unset inner falls back to literal:
+${IRONSUBST_UNSET:-${IRONSUBST_UNSET_2:-nested_literal}}
+# Empty outer (:-), set inner:
+${IRONSUBST_EMPTY:-${IRONSUBST_SET}}
+# Set outer wins — inner is never evaluated:
+${IRONSUBST_SET:-${IRONSUBST_UNSET}}
+
+--- Escape Sequences ---
+# $$ is an escape for a literal $. Both tools agree.
+$$IRONSUBST_SET             -> $$IRONSUBST_SET
+$${IRONSUBST_SET}           -> $${IRONSUBST_SET}
+$$$IRONSUBST_SET            -> $$$IRONSUBST_SET
