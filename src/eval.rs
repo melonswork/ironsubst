@@ -258,7 +258,10 @@ fn nodes_to_text(nodes: &[Node]) -> String {
     nodes
         .iter()
         .map(|n| match n {
-            Node::Text(t) => t.clone(),
+            // Re-escape literal `$` as `$$` so the output round-trips correctly.
+            // Text nodes store `$` for both `$$` (escape) and bare `$` followed
+            // by a non-identifier char — both need `$$` to survive re-parsing.
+            Node::Text(t) => t.replace('$', "$$"),
             Node::Variable {
                 name,
                 braced,

@@ -842,6 +842,10 @@ fn test_prefix_filter() {
     .unwrap();
     assert_eq!(r, "$OTHER");
 
+    // Regression: $$ in the fallback of a non-matching variable must not lose the extra $
+    let r = process("${OTHER:-$$}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(r, "${OTHER:-$$}");
+
     // Empty prefix = substitute everything (same as None)
     let r = process("${OTHER}", &env, relaxed, false, false, Some("")).unwrap();
     assert_eq!(r, "secret");
