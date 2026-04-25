@@ -59,7 +59,7 @@ pub struct Args {
     generate_man_page: bool,
 
     /// Inline template string (use `--` to separate from flags)
-    #[arg(last = true)]
+    #[arg(last = true, conflicts_with = "input")]
     explicit_input: Option<String>,
 
     #[command(subcommand)]
