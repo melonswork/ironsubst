@@ -166,6 +166,11 @@ fn main() {
                 // so a kill/OOM/disk-full mid-write cannot leave a partial file.
                 let dest = Path::new(&output_file);
                 let dir = dest.parent().unwrap_or_else(|| Path::new("."));
+
+                // Preserve permissions of an existing destination file so that
+                // replacing a 0755 script does not silently reset it to 0600.
+                let existing_mode = dest.metadata().ok().map(|m| m.permissions());
+
                 let mut tmp = tempfile::NamedTempFile::new_in(dir).unwrap_or_else(|e| {
                     eprintln!("Error creating temp file near {}: {}", output_file, e);
                     std::process::exit(1);
@@ -174,6 +179,12 @@ fn main() {
                     eprintln!("Error writing to temp file: {}", e);
                     std::process::exit(1);
                 });
+                if let Some(perms) = existing_mode {
+                    std::fs::set_permissions(tmp.path(), perms).unwrap_or_else(|e| {
+                        eprintln!("Error setting permissions on temp file: {}", e);
+                        std::process::exit(1);
+                    });
+                }
                 tmp.persist(dest).unwrap_or_else(|e| {
                     eprintln!("Error writing to output file {}: {}", output_file, e);
                     std::process::exit(1);

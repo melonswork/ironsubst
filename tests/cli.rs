@@ -1,6 +1,7 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
 use tempfile::NamedTempFile;
 
 fn cmd() -> Command {
@@ -148,4 +149,28 @@ fn missing_env_file_exits_nonzero() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("cannot read env file"));
+}
+
+#[test]
+fn output_file_preserves_permissions() {
+    let mut dest = NamedTempFile::new().unwrap();
+    writeln!(dest, "hello $NAME").unwrap();
+    // Set 0755 — executable
+    std::fs::set_permissions(dest.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    cmd()
+        .env("NAME", "world")
+        .arg("--input")
+        .arg(dest.path())
+        .arg("--output")
+        .arg(dest.path())
+        .assert()
+        .success();
+
+    let mode = std::fs::metadata(dest.path()).unwrap().permissions().mode();
+    assert_eq!(
+        mode & 0o777,
+        0o755,
+        "output file permissions should be preserved"
+    );
 }
