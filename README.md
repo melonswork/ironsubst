@@ -89,6 +89,33 @@ By default, `ironsubst` will silently substitute empty strings for missing varia
 
 You can also combine these with `-f` / `--fail-fast` to exit on the very first validation error instead of collecting all errors.
 
+### Environment Files
+
+Load variables from one or more `.env` files with `--env-file`:
+
+```bash
+ironsubst --env-file prod.env -i config.tmpl.yaml -o config.yaml
+# Multiple files: later files override earlier ones
+ironsubst --env-file base.env --env-file override.env -i config.tmpl.yaml
+```
+
+To ignore the caller's shell environment entirely (only use file-sourced variables):
+
+```bash
+ironsubst --env-file prod.env --ignore-env -i config.tmpl.yaml
+```
+
+`.env` file syntax supported: `KEY=VALUE`, `export KEY=VALUE`, double- and single-quoted values, and `#` comments.
+
+### Prefix Filter
+
+With `--prefix`, only variables whose names start with the given prefix are substituted. Variables that don't match are left verbatim in the output:
+
+```bash
+# Substitutes $MYAPP_HOST and $MYAPP_PORT but leaves $OTHER unchanged
+ironsubst --prefix MYAPP_ -i config.tmpl.yaml
+```
+
 ### Other Flags
 
 - `--no-digit`: Do not replace variables that start with a digit (e.g. `$1`, `${12}`).
