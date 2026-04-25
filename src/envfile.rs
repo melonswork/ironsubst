@@ -134,13 +134,32 @@ fn parse_value(raw: &str) -> Result<String, String> {
         }
         validate_trailing(chars.as_str())?;
         Ok(value)
-    } else if let Some(inner) = raw.strip_prefix('\'') {
-        // Single-quoted: no escapes, scan for closing `'`
-        let close = inner
-            .find('\'')
-            .ok_or_else(|| "unterminated single-quoted value".to_string())?;
-        validate_trailing(&inner[close + 1..])?;
-        Ok(inner[..close].to_string())
+    } else if let Some(initial) = raw.strip_prefix('\'') {
+        // Single-quoted: no escapes inside quotes.
+        // Supports POSIX '\'' concatenation: 'it'\''s fine' → it's fine
+        //   close the quote, escape one literal ', optionally reopen.
+        let mut value = String::new();
+        let mut remaining = initial;
+        loop {
+            let close = remaining
+                .find('\'')
+                .ok_or_else(|| "unterminated single-quoted value".to_string())?;
+            value.push_str(&remaining[..close]);
+            remaining = &remaining[close + 1..];
+            if let Some(after_escape) = remaining.strip_prefix("\\'") {
+                value.push('\'');
+                if let Some(after_open) = after_escape.strip_prefix('\'') {
+                    remaining = after_open;
+                } else {
+                    remaining = after_escape;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        validate_trailing(remaining)?;
+        Ok(value)
     } else {
         // Unquoted: strip inline comment and trailing whitespace
         let value = strip_inline_comment(raw).trim_end();
@@ -303,5 +322,17 @@ mod tests {
     #[test]
     fn test_unterminated_single_quote() {
         assert!(parse("FOO='unterminated\n").is_err());
+    }
+
+    #[test]
+    fn test_single_quoted_posix_escape() {
+        let env = parse("FOO='it'\\''s fine'\n").unwrap();
+        assert_eq!(env["FOO"], "it's fine");
+    }
+
+    #[test]
+    fn test_single_quoted_posix_escape_with_comment() {
+        let env = parse("FOO='it'\\''s fine' # comment\n").unwrap();
+        assert_eq!(env["FOO"], "it's fine");
     }
 }
