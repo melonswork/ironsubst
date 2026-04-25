@@ -3,7 +3,7 @@ FROM rust:latest AS builder
 WORKDIR /usr/src/ironsubst
 COPY . .
 
-RUN cargo build --release
+RUN cargo build --release --locked
 
 FROM debian:bookworm-slim
 
