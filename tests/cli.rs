@@ -96,7 +96,9 @@ fn env_file_trailing_garbage_after_double_quote_is_error() {
         .args(["--", "$FOO"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("unexpected content after closing quote"));
+        .stderr(predicate::str::contains(
+            "unexpected content after closing quote",
+        ));
 }
 
 #[test]
@@ -109,7 +111,9 @@ fn env_file_trailing_garbage_after_single_quote_is_error() {
         .args(["--", "$FOO"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("unexpected content after closing quote"));
+        .stderr(predicate::str::contains(
+            "unexpected content after closing quote",
+        ));
 }
 
 #[test]
