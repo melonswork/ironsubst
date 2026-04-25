@@ -190,10 +190,6 @@ impl<'a> Parser<'a> {
             name.push(c);
         }
 
-        if name == "_" {
-            return String::new();
-        }
-
         name
     }
 }
