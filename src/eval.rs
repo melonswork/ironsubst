@@ -95,7 +95,12 @@ pub fn eval_nodes(
                                         prefix,
                                     ) {
                                         Ok(s) => result.push_str(&s),
-                                        Err(mut e) => errors.append(&mut e),
+                                        Err(mut e) => {
+                                            errors.append(&mut e);
+                                            if fail_fast {
+                                                return Err(errors);
+                                            }
+                                        }
                                     }
                                 }
                                 substituted = true;
@@ -118,7 +123,12 @@ pub fn eval_nodes(
                                         prefix,
                                     ) {
                                         Ok(s) => result.push_str(&s),
-                                        Err(mut e) => errors.append(&mut e),
+                                        Err(mut e) => {
+                                            errors.append(&mut e);
+                                            if fail_fast {
+                                                return Err(errors);
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -138,7 +148,12 @@ pub fn eval_nodes(
                                         prefix,
                                     ) {
                                         Ok(s) => err_msg = s,
-                                        Err(mut e) => errors.append(&mut e),
+                                        Err(mut e) => {
+                                            errors.append(&mut e);
+                                            if fail_fast {
+                                                return Err(errors);
+                                            }
+                                        }
                                     }
                                 }
 
