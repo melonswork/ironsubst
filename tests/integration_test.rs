@@ -998,3 +998,24 @@ fn test_deeply_nested_expression_errors_not_crashes() {
         "error message should mention nesting depth"
     );
 }
+
+#[test]
+fn test_unsupported_operator_preserved_verbatim() {
+    // Regression: ${FOO#prefix} was silently parsed as plain ${FOO}, discarding
+    // the unsupported operator and emitting the variable value instead of verbatim text.
+    let mut env = HashMap::new();
+    env.insert("FOO".to_string(), "hello".to_string());
+    let relaxed = Restrictions::default();
+
+    let r = process("${FOO#prefix}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "${FOO#prefix}");
+
+    let r = process("${FOO##*/}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "${FOO##*/}");
+
+    let r = process("${FOO%suffix}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "${FOO%suffix}");
+
+    let r = process("${FOO:0:3}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "${FOO:0:3}");
+}

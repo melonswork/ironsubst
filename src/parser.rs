@@ -90,6 +90,7 @@ impl<'a> Parser<'a> {
 
                 if is_braced {
                     let mut operator = None;
+                    let mut has_unsupported_op = false;
 
                     // Keep the two-level `if` for readability: the outer check
                     // guards against end-of-input, the inner check tests the
@@ -131,30 +132,39 @@ impl<'a> Parser<'a> {
                                 }
                             }
 
-                            if !valid_op && colon {
-                                // backtrack the colon since it wasn't part of a valid operator
-                                self.pos = saved_pos;
+                            if !valid_op {
+                                if colon {
+                                    // backtrack the colon since it wasn't part of a valid operator
+                                    self.pos = saved_pos;
+                                }
+                                has_unsupported_op = true;
                             }
                         }
                     }
 
-                    // Anything inside braces after operator is fallback (or text if no operator)
+                    // Consume the brace content to advance past the closing brace.
                     let fallback = self.parse_nodes(true, depth + 1)?;
 
                     if self.next() != Some('}') {
                         return Err(ParseError::UnclosedBrace);
                     }
 
-                    nodes.push(Node::Variable {
-                        name,
-                        braced: true,
-                        operator,
-                        fallback: if fallback.is_empty() {
-                            None
-                        } else {
-                            Some(fallback)
-                        },
-                    });
+                    if has_unsupported_op {
+                        // Unrecognised operator (e.g. `${FOO#prefix}`, `${FOO%suffix}`,
+                        // `${FOO:0:5}`) — emit verbatim so the expression is preserved.
+                        nodes.push(Node::Text(self.input[start_pos..self.pos].to_string()));
+                    } else {
+                        nodes.push(Node::Variable {
+                            name,
+                            braced: true,
+                            operator,
+                            fallback: if fallback.is_empty() {
+                                None
+                            } else {
+                                Some(fallback)
+                            },
+                        });
+                    }
                 } else {
                     nodes.push(Node::Variable {
                         name,
