@@ -1,9 +1,13 @@
 use crate::ast::{Node, Operator};
 
+const MAX_DEPTH: usize = 128;
+
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
     #[error("closing brace expected")]
     UnclosedBrace,
+    #[error("expression nested too deeply (max {} levels)", MAX_DEPTH)]
+    TooDeep,
 }
 
 pub fn parse(input: &str, no_digit: bool) -> Result<Vec<Node>, ParseError> {
@@ -12,7 +16,7 @@ pub fn parse(input: &str, no_digit: bool) -> Result<Vec<Node>, ParseError> {
         pos: 0,
         no_digit,
     };
-    parser.parse_nodes(false)
+    parser.parse_nodes(false, 0)
 }
 
 struct Parser<'a> {
@@ -35,7 +39,10 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_nodes(&mut self, in_braces: bool) -> Result<Vec<Node>, ParseError> {
+    fn parse_nodes(&mut self, in_braces: bool, depth: usize) -> Result<Vec<Node>, ParseError> {
+        if depth > MAX_DEPTH {
+            return Err(ParseError::TooDeep);
+        }
         let mut nodes = Vec::new();
         let mut text_buf = String::new();
 
@@ -132,7 +139,7 @@ impl<'a> Parser<'a> {
                     }
 
                     // Anything inside braces after operator is fallback (or text if no operator)
-                    let fallback = self.parse_nodes(true)?;
+                    let fallback = self.parse_nodes(true, depth + 1)?;
 
                     if self.next() != Some('}') {
                         return Err(ParseError::UnclosedBrace);

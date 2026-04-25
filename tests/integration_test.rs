@@ -982,3 +982,19 @@ fn test_underscore_var_substituted_when_set() {
     .unwrap();
     assert_eq!(r, "underscore_val and underscore_val");
 }
+
+#[test]
+fn test_deeply_nested_expression_errors_not_crashes() {
+    // Regression: deeply nested ${A:-${A:-...}} used to stack-overflow the process.
+    let env = get_fake_env();
+    let nested: String = "${A:-".repeat(200) + "x" + &"}".repeat(200);
+    let r = process(&nested, &env, Restrictions::default(), false, false, None);
+    assert!(
+        r.is_err(),
+        "should return an error for excessive nesting depth"
+    );
+    assert!(
+        r.unwrap_err().to_string().contains("nested too deeply"),
+        "error message should mention nesting depth"
+    );
+}
