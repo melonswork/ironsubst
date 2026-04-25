@@ -935,3 +935,46 @@ fn test_error_operator() {
     .unwrap_err();
     assert_eq!(err.to_string(), "EMPTY: parameter null or not set");
 }
+
+#[test]
+fn test_fail_fast_stops_inside_fallback() {
+    // Regression for: fail_fast was ignored after a fallback expression itself errored.
+    // ${NOTSET_A:-$NOTSET_B} $NOTSET_C — with require_values + fail_fast should
+    // produce exactly one error (from the fallback), not two.
+    let env = get_fake_env();
+    let restrictions = Restrictions {
+        require_values: true,
+        require_nonempty_values: false,
+    };
+    let r = process(
+        "${NOTSET_A:-$NOTSET_B} $NOTSET_C",
+        &env,
+        restrictions,
+        false,
+        true,
+        None,
+    );
+    assert!(r.is_err());
+    assert_eq!(
+        r.unwrap_err().to_string().lines().count(),
+        1,
+        "fail_fast must stop after the first error inside a fallback"
+    );
+}
+
+#[test]
+fn test_underscore_var_substituted_when_set() {
+    // Regression for: $_ and ${_} were left verbatim even when _ was in the env.
+    let mut env = HashMap::new();
+    env.insert("_".to_string(), "underscore_val".to_string());
+    let r = process(
+        "$_ and ${_}",
+        &env,
+        Restrictions::default(),
+        false,
+        false,
+        None,
+    )
+    .unwrap();
+    assert_eq!(r, "underscore_val and underscore_val");
+}
