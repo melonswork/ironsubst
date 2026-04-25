@@ -111,7 +111,7 @@ fn parse_value(raw: &str) -> Result<String, String> {
     if let Some(inner) = raw.strip_prefix('"') {
         // Double-quoted: scan for closing unescaped `"`
         let mut value = String::with_capacity(inner.len());
-        let mut chars = inner.chars().peekable();
+        let mut chars = inner.chars();
         loop {
             match chars.next() {
                 None => return Err("unterminated double-quoted value".to_string()),
@@ -132,18 +132,31 @@ fn parse_value(raw: &str) -> Result<String, String> {
                 Some(c) => value.push(c),
             }
         }
-        // Any trailing content after the closing quote is ignored (allows comments like `"val" # note`)
+        validate_trailing(chars.as_str())?;
         Ok(value)
     } else if let Some(inner) = raw.strip_prefix('\'') {
         // Single-quoted: no escapes, scan for closing `'`
         let close = inner
             .find('\'')
             .ok_or_else(|| "unterminated single-quoted value".to_string())?;
+        validate_trailing(&inner[close + 1..])?;
         Ok(inner[..close].to_string())
     } else {
         // Unquoted: strip inline comment and trailing whitespace
         let value = strip_inline_comment(raw).trim_end();
         Ok(value.to_string())
+    }
+}
+
+/// Validate that content after a closing quote is only whitespace / a comment.
+/// Accepts: empty, whitespace-only, or whitespace then `#...`.
+/// Rejects anything else (e.g. `"val"oops`).
+fn validate_trailing(s: &str) -> Result<(), String> {
+    let trimmed = s.trim_start();
+    if trimmed.is_empty() || trimmed.starts_with('#') {
+        Ok(())
+    } else {
+        Err(format!("unexpected content after closing quote: {trimmed}"))
     }
 }
 
