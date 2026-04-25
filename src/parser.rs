@@ -73,6 +73,38 @@ impl<'a> Parser<'a> {
                     is_braced = true;
                 }
 
+                // ${#VAR}: '#' before the name means "length of VAR".
+                // Only treat it as the length operator when '#' is followed by a
+                // valid identifier start; otherwise fall through to the empty-name
+                // path which emits `${` verbatim (handles `${#}`, `${# }`, etc.).
+                if is_braced && self.peek() == Some('#') {
+                    let after_hash = self.pos + '#'.len_utf8();
+                    let next_is_ident = self.input[after_hash..]
+                        .chars()
+                        .next()
+                        .is_some_and(is_alpha_numeric);
+                    if next_is_ident {
+                        self.next(); // consume '#'
+                        let name = self.read_var_name();
+                        if !text_buf.is_empty() {
+                            nodes.push(Node::Text(std::mem::take(&mut text_buf)));
+                        }
+                        // Consume any trailing content before '}' (there should be
+                        // none for a well-formed ${#VAR}, but be defensive).
+                        let _ = self.parse_nodes(true, depth + 1)?;
+                        if self.next() != Some('}') {
+                            return Err(ParseError::UnclosedBrace);
+                        }
+                        nodes.push(Node::Variable {
+                            name,
+                            braced: true,
+                            operator: Some(Operator::Length),
+                            fallback: None,
+                        });
+                        continue;
+                    }
+                }
+
                 let name = self.read_var_name();
 
                 if name.is_empty() {

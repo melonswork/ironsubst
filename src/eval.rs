@@ -80,6 +80,11 @@ pub fn eval_nodes(
                 let mut substituted = false;
                 if let Some(op) = operator {
                     match op {
+                        Operator::Length => {
+                            let len = value.map(|s| s.chars().count()).unwrap_or(0);
+                            result.push_str(&len.to_string());
+                            substituted = true;
+                        }
                         // Default (`-`, `:-`) and Assign (`=`, `:=`) behave identically
                         // for template substitution purposes: output the fallback value
                         // when the variable is unset (or empty when the colon form is used).
@@ -184,6 +189,11 @@ pub fn eval_nodes(
                             // preventing duplicate error messages from strictness flags.
                             substituted = true;
                         }
+                        Operator::PrefixStrip(_)
+                        | Operator::SuffixStrip(_)
+                        | Operator::Substring { .. } => {
+                            unreachable!("not yet produced by parser")
+                        }
                     }
                 }
 
@@ -242,6 +252,26 @@ fn original_text(
         Some(Operator::Assign(colon)) => format!("{}=", if *colon { ":" } else { "" }),
         Some(Operator::Substitute(colon)) => format!("{}+", if *colon { ":" } else { "" }),
         Some(Operator::Error(colon)) => format!("{}?", if *colon { ":" } else { "" }),
+        // Length uses a different form: ${#name} rather than ${name#}
+        Some(Operator::Length) => return format!("${{{}{}}}", "#", name),
+        Some(Operator::PrefixStrip(g)) => {
+            if *g {
+                "##".to_string()
+            } else {
+                "#".to_string()
+            }
+        }
+        Some(Operator::SuffixStrip(g)) => {
+            if *g {
+                "%%".to_string()
+            } else {
+                "%".to_string()
+            }
+        }
+        Some(Operator::Substring { offset, length }) => match length {
+            None => format!(":{offset}"),
+            Some(n) => format!(":{offset}:{n}"),
+        },
     };
 
     let fallback_str = match fallback {

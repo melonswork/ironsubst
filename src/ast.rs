@@ -1,9 +1,16 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Operator {
-    Default(bool),    // -, :- (bool is true if it has colon)
-    Assign(bool),     // =, :=
-    Substitute(bool), // +, :+
-    Error(bool),      // ?, :?
+    Default(bool),     // -, :- (bool is true if it has colon)
+    Assign(bool),      // =, :=
+    Substitute(bool),  // +, :+
+    Error(bool),       // ?, :?
+    Length,            // ${#VAR}
+    PrefixStrip(bool), // #, ## (bool = greedy/longest)
+    SuffixStrip(bool), // %, %% (bool = greedy/longest)
+    Substring {
+        offset: usize,
+        length: Option<usize>,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]

@@ -1000,6 +1000,33 @@ fn test_deeply_nested_expression_errors_not_crashes() {
 }
 
 #[test]
+fn test_length_operator() {
+    let mut env = HashMap::new();
+    env.insert("WORD".to_string(), "hello".to_string());
+    env.insert("EMPTY".to_string(), "".to_string());
+    env.insert("UNICODE".to_string(), "héllo".to_string()); // 5 chars, 6 bytes
+    let relaxed = Restrictions::default();
+
+    let r = process("${#WORD}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "5");
+
+    let r = process("${#EMPTY}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "0");
+
+    // Unset → length 0
+    let r = process("${#NOTSET}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "0");
+
+    // Unicode: char count, not byte count
+    let r = process("${#UNICODE}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "5");
+
+    // Works inside larger template
+    let r = process("len=${#WORD}!", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "len=5!");
+}
+
+#[test]
 fn test_unsupported_operator_preserved_verbatim() {
     // Regression: ${FOO#prefix} was silently parsed as plain ${FOO}, discarding
     // the unsupported operator and emitting the variable value instead of verbatim text.
