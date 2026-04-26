@@ -25,6 +25,10 @@ A fast, configurable env**iron**ment variable **subst**itution tool written in R
   - `${VAR:=default}` and `${VAR=default}` (Assign defaults — note: unlike real bash, the value is _not_ written back to the environment; only the output is affected)
   - `${VAR:+sub}` and `${VAR+sub}` (Alternate/Substitute — POSIX-correct: `:+` fires only when VAR is set _and_ non-empty)
   - `${VAR:?msg}` and `${VAR?msg}` (Error — exit with custom message if VAR is unset/empty; `a8m/envsubst` doesn't support this)
+  - `${#VAR}` (String length)
+  - `${VAR#pattern}` and `${VAR##pattern}` (Prefix strip — shortest and longest match; supports `*`, `?`, `[abc]` globs)
+  - `${VAR%pattern}` and `${VAR%%pattern}` (Suffix strip — shortest and longest match; supports `*`, `?`, `[abc]` globs)
+  - `${VAR:offset}` and `${VAR:offset:length}` (Substring — counts Unicode characters, not bytes)
 - **Granular Strictness**: Control exactly what missing or empty variables are allowed using new CLI flags.
 - **Multiple Inputs**: Read from files, `stdin`, or explicit string arguments.
 - **Fast and Safe**: Powered by Rust, memory-safe, zero `unsafe` code, standalone binary.
