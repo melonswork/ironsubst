@@ -3,6 +3,7 @@
 pub mod ast;
 pub mod envfile;
 pub mod eval;
+pub mod glob;
 pub mod parser;
 
 use std::collections::HashMap;
