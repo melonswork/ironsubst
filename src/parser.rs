@@ -178,6 +178,21 @@ impl<'a> Parser<'a> {
                                         operator = Some(Operator::SuffixStrip(greedy));
                                         valid_op = true;
                                     }
+                                    // ${VAR:N} / ${VAR:N:M} — substring. Only fires
+                                    // when the colon was already consumed and the
+                                    // next char is a digit. `:-` / `:=` / `:+` / `:?`
+                                    // are handled by the arms above and are unambiguous.
+                                    _ if colon && op_type.is_ascii_digit() => {
+                                        let offset = self.read_integer();
+                                        let length = if self.peek() == Some(':') {
+                                            self.next();
+                                            Some(self.read_integer())
+                                        } else {
+                                            None
+                                        };
+                                        operator = Some(Operator::Substring { offset, length });
+                                        valid_op = true;
+                                    }
                                     _ => {}
                                 }
                             }
@@ -233,6 +248,20 @@ impl<'a> Parser<'a> {
         }
 
         Ok(nodes)
+    }
+
+    fn read_integer(&mut self) -> usize {
+        let mut n: usize = 0;
+        while let Some(c) = self.peek() {
+            if !c.is_ascii_digit() {
+                break;
+            }
+            self.next();
+            n = n
+                .saturating_mul(10)
+                .saturating_add(c as usize - '0' as usize);
+        }
+        n
     }
 
     fn read_var_name(&mut self) -> String {

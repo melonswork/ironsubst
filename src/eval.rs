@@ -202,8 +202,15 @@ pub fn eval_nodes(
                             result.push_str(glob::strip_suffix(v, &pat, *greedy));
                             substituted = true;
                         }
-                        Operator::Substring { .. } => {
-                            unreachable!("not yet produced by parser")
+                        Operator::Substring { offset, length } => {
+                            let v = value.map(|s| s.as_str()).unwrap_or("");
+                            let chars: Vec<char> = v.chars().collect();
+                            let start = (*offset).min(chars.len());
+                            let end = length
+                                .map(|n| (start + n).min(chars.len()))
+                                .unwrap_or(chars.len());
+                            result.push_str(&chars[start..end].iter().collect::<String>());
+                            substituted = true;
                         }
                     }
                 }

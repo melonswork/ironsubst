@@ -1067,16 +1067,50 @@ fn test_prefix_suffix_strip() {
 }
 
 #[test]
+fn test_substring_operator() {
+    let mut env = HashMap::new();
+    env.insert("WORD".to_string(), "helloworld".to_string());
+    env.insert("UNICODE".to_string(), "héllo".to_string());
+    let relaxed = Restrictions::default();
+
+    // Basic offset without length
+    let r = process("${WORD:5}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "world");
+
+    // Offset and length
+    let r = process("${WORD:0:5}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "hello");
+    let r = process("${WORD:2:3}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "llo");
+
+    // Offset past end → empty
+    let r = process("${WORD:100}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "");
+
+    // Length past end → clamp to end
+    let r = process("${WORD:7:100}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "rld");
+
+    // Zero offset, zero length → empty
+    let r = process("${WORD:0:0}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "");
+
+    // Unset variable → empty
+    let r = process("${NOTSET:0:3}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "");
+
+    // Unicode: offset counts chars not bytes
+    let r = process("${UNICODE:1:3}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "éll");
+}
+
+#[test]
 fn test_unsupported_operator_preserved_verbatim() {
     // Operators that are not (yet) implemented must be preserved verbatim rather
     // than silently stripping the operator and substituting the raw variable value.
     let mut env = HashMap::new();
     env.insert("FOO".to_string(), "hello".to_string());
     let relaxed = Restrictions::default();
-
-    // Substring (${VAR:offset:length}) — not yet implemented
-    let r = process("${FOO:0:3}", &env, relaxed, false, false, None).unwrap();
-    assert_eq!(r, "${FOO:0:3}");
 
     // String replacement — not implemented
     let r = process("${FOO/hello/world}", &env, relaxed, false, false, None).unwrap();
