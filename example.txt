@@ -72,6 +72,41 @@ ${IRON_EMPTY:-${IRON_SET}}
 # Set outer wins — inner is never evaluated:
 ${IRON_SET:-${IRON_UNSET}}
 
+--- String Length ($${#VAR}) ---
+# ironsubst supports $${#VAR} to return the number of Unicode characters.
+# DIVERGENCE: a8m/envsubst does NOT support this operator (outputs literal text).
+$${#IRON_SET}           -> ${#IRON_SET}
+$${#IRON_EMPTY}         -> ${#IRON_EMPTY}
+$${#IRON_UNSET}         -> ${#IRON_UNSET}
+
+--- Prefix Strip (# and ##) ---
+# $${VAR#pat}  strips the SHORTEST prefix matching pat (glob: *, ?, [abc]).
+# $${VAR##pat} strips the LONGEST  prefix matching pat.
+# Unset/empty variables produce an empty string (no error).
+# DIVERGENCE: a8m/envsubst does NOT support these operators (outputs literal text).
+$${IRON_SET#hello}      -> ${IRON_SET#hello}
+$${IRON_SET#*o}         -> ${IRON_SET#*o}
+$${IRON_SET##*o}        -> ${IRON_SET##*o}
+$${IRON_SET#nomatch}    -> ${IRON_SET#nomatch}
+
+--- Suffix Strip (% and %%) ---
+# $${VAR%pat}  strips the SHORTEST suffix matching pat (glob: *, ?, [abc]).
+# $${VAR%%pat} strips the LONGEST  suffix matching pat.
+# DIVERGENCE: a8m/envsubst does NOT support these operators (outputs literal text).
+$${IRON_SET%world}      -> ${IRON_SET%world}
+$${IRON_SET%o*}         -> ${IRON_SET%o*}
+$${IRON_SET%%o*}        -> ${IRON_SET%%o*}
+$${IRON_SET%nomatch}    -> ${IRON_SET%nomatch}
+
+--- Substring ($${VAR:offset} and $${VAR:offset:length}) ---
+# $${VAR:N}    returns all characters from position N onward.
+# $${VAR:N:M}  returns M characters starting at position N.
+# Counts Unicode characters, not bytes.
+# DIVERGENCE: a8m/envsubst does NOT support this operator (outputs literal text).
+$${IRON_SET:6}          -> ${IRON_SET:6}
+$${IRON_SET:0:5}        -> ${IRON_SET:0:5}
+$${IRON_SET:6:3}        -> ${IRON_SET:6:3}
+
 --- Escape Sequences ---
 # $$ is an escape for a literal $. Both tools agree.
 $$$IRON_SET             -> $$IRON_SET
