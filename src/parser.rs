@@ -160,6 +160,24 @@ impl<'a> Parser<'a> {
                                         operator = Some(Operator::Error(colon));
                                         valid_op = true;
                                     }
+                                    '#' if !colon => {
+                                        self.next(); // first '#'
+                                        let greedy = self.peek() == Some('#');
+                                        if greedy {
+                                            self.next(); // second '#'
+                                        }
+                                        operator = Some(Operator::PrefixStrip(greedy));
+                                        valid_op = true;
+                                    }
+                                    '%' if !colon => {
+                                        self.next(); // first '%'
+                                        let greedy = self.peek() == Some('%');
+                                        if greedy {
+                                            self.next(); // second '%'
+                                        }
+                                        operator = Some(Operator::SuffixStrip(greedy));
+                                        valid_op = true;
+                                    }
                                     _ => {}
                                 }
                             }

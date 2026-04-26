@@ -1027,22 +1027,62 @@ fn test_length_operator() {
 }
 
 #[test]
+fn test_prefix_suffix_strip() {
+    let mut env = HashMap::new();
+    env.insert("PATH_VAR".to_string(), "/usr/local/bin/node".to_string());
+    env.insert("FILENAME".to_string(), "file.tar.gz".to_string());
+    env.insert("PLAIN".to_string(), "helloworld".to_string());
+    let relaxed = Restrictions::default();
+
+    // ${VAR#pat} — shortest prefix strip
+    // "*/": shortest prefix ending in '/' is the first '/'
+    let r = process("${PATH_VAR#*/}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "usr/local/bin/node");
+
+    // ${VAR##pat} — longest prefix strip (path basename)
+    let r = process("${PATH_VAR##*/}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "node");
+
+    // ${VAR%pat} — shortest suffix strip
+    let r = process("${FILENAME%.*}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "file.tar");
+
+    // ${VAR%%pat} — longest suffix strip (strip all extensions)
+    let r = process("${FILENAME%%.*}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "file");
+
+    // Literal prefix/suffix
+    let r = process("${PLAIN#hello}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "world");
+    let r = process("${PLAIN%world}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "hello");
+
+    // No match — return original value
+    let r = process("${PLAIN#xyz}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "helloworld");
+
+    // Unset variable — treat as empty string, return ""
+    let r = process("${NOTSET#prefix}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "");
+}
+
+#[test]
 fn test_unsupported_operator_preserved_verbatim() {
-    // Regression: ${FOO#prefix} was silently parsed as plain ${FOO}, discarding
-    // the unsupported operator and emitting the variable value instead of verbatim text.
+    // Operators that are not (yet) implemented must be preserved verbatim rather
+    // than silently stripping the operator and substituting the raw variable value.
     let mut env = HashMap::new();
     env.insert("FOO".to_string(), "hello".to_string());
     let relaxed = Restrictions::default();
 
-    let r = process("${FOO#prefix}", &env, relaxed, false, false, None).unwrap();
-    assert_eq!(r, "${FOO#prefix}");
-
-    let r = process("${FOO##*/}", &env, relaxed, false, false, None).unwrap();
-    assert_eq!(r, "${FOO##*/}");
-
-    let r = process("${FOO%suffix}", &env, relaxed, false, false, None).unwrap();
-    assert_eq!(r, "${FOO%suffix}");
-
+    // Substring (${VAR:offset:length}) — not yet implemented
     let r = process("${FOO:0:3}", &env, relaxed, false, false, None).unwrap();
     assert_eq!(r, "${FOO:0:3}");
+
+    // String replacement — not implemented
+    let r = process("${FOO/hello/world}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "${FOO/hello/world}");
+
+    // Case modification — not implemented
+    let r = process("${FOO^^}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "${FOO^^}");
 }

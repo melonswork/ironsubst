@@ -1,4 +1,5 @@
 use crate::ast::{Node, Operator};
+use crate::glob;
 use std::collections::HashMap;
 
 #[derive(Debug, thiserror::Error)]
@@ -189,9 +190,19 @@ pub fn eval_nodes(
                             // preventing duplicate error messages from strictness flags.
                             substituted = true;
                         }
-                        Operator::PrefixStrip(_)
-                        | Operator::SuffixStrip(_)
-                        | Operator::Substring { .. } => {
+                        Operator::PrefixStrip(greedy) => {
+                            let pat = nodes_to_text(fallback.as_deref().unwrap_or(&[]));
+                            let v = value.map(|s| s.as_str()).unwrap_or("");
+                            result.push_str(glob::strip_prefix(v, &pat, *greedy));
+                            substituted = true;
+                        }
+                        Operator::SuffixStrip(greedy) => {
+                            let pat = nodes_to_text(fallback.as_deref().unwrap_or(&[]));
+                            let v = value.map(|s| s.as_str()).unwrap_or("");
+                            result.push_str(glob::strip_suffix(v, &pat, *greedy));
+                            substituted = true;
+                        }
+                        Operator::Substring { .. } => {
                             unreachable!("not yet produced by parser")
                         }
                     }
