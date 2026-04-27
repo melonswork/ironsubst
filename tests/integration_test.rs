@@ -1205,6 +1205,97 @@ fn test_substring_operator() {
 }
 
 #[test]
+fn test_stringmanip_operators_respect_restrictions() {
+    // Regression: Length, PrefixStrip, SuffixStrip, Substring operators
+    // unconditionally set `substituted = true`, bypassing the restriction checks
+    // in the `if !substituted` block. They must run the same unset/empty checks.
+    let mut env = HashMap::new();
+    env.insert("SET".to_string(), "hello".to_string());
+    env.insert("EMPTY".to_string(), "".to_string());
+    let rv = Restrictions {
+        require_values: true,
+        require_nonempty_values: false,
+    };
+    let rn = Restrictions {
+        require_values: false,
+        require_nonempty_values: true,
+    };
+
+    // Length operator
+    let r = process("${#NOTSET}", &env, rv, false, false, None);
+    assert!(
+        r.is_err(),
+        "Length on unset var must fail with --require-values"
+    );
+    let r = process("${#NOTSET}", &env, rn, false, false, None);
+    assert!(
+        r.is_err(),
+        "Length on unset var must fail with --require-nonempty-values"
+    );
+    let r = process("${#EMPTY}", &env, rn, false, false, None);
+    assert!(
+        r.is_err(),
+        "Length on empty var must fail with --require-nonempty-values"
+    );
+    let r = process("${#SET}", &env, rv, false, false, None);
+    assert!(
+        r.is_ok(),
+        "Length on set var must succeed with --require-values"
+    );
+
+    // PrefixStrip operator
+    let r = process("${NOTSET#x}", &env, rv, false, false, None);
+    assert!(
+        r.is_err(),
+        "PrefixStrip on unset var must fail with --require-values"
+    );
+    let r = process("${EMPTY#x}", &env, rn, false, false, None);
+    assert!(
+        r.is_err(),
+        "PrefixStrip on empty var must fail with --require-nonempty-values"
+    );
+    let r = process("${SET#x}", &env, rv, false, false, None);
+    assert!(
+        r.is_ok(),
+        "PrefixStrip on set var must succeed with --require-values"
+    );
+
+    // SuffixStrip operator
+    let r = process("${NOTSET%x}", &env, rv, false, false, None);
+    assert!(
+        r.is_err(),
+        "SuffixStrip on unset var must fail with --require-values"
+    );
+    let r = process("${EMPTY%x}", &env, rn, false, false, None);
+    assert!(
+        r.is_err(),
+        "SuffixStrip on empty var must fail with --require-nonempty-values"
+    );
+    let r = process("${SET%x}", &env, rv, false, false, None);
+    assert!(
+        r.is_ok(),
+        "SuffixStrip on set var must succeed with --require-values"
+    );
+
+    // Substring operator
+    let r = process("${NOTSET:0:2}", &env, rv, false, false, None);
+    assert!(
+        r.is_err(),
+        "Substring on unset var must fail with --require-values"
+    );
+    let r = process("${EMPTY:0:2}", &env, rn, false, false, None);
+    assert!(
+        r.is_err(),
+        "Substring on empty var must fail with --require-nonempty-values"
+    );
+    let r = process("${SET:0:2}", &env, rv, false, false, None);
+    assert!(
+        r.is_ok(),
+        "Substring on set var must succeed with --require-values"
+    );
+}
+
+#[test]
 fn test_unsupported_operator_preserved_verbatim() {
     // Operators that are not (yet) implemented must be preserved verbatim rather
     // than silently stripping the operator and substituting the raw variable value.

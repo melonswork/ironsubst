@@ -82,6 +82,21 @@ pub fn eval_nodes(
                 if let Some(op) = operator {
                     match op {
                         Operator::Length => {
+                            if !is_set
+                                && (restrictions.require_values
+                                    || restrictions.require_nonempty_values)
+                            {
+                                errors.push(EvalError::Unset(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
+                            if restrictions.require_nonempty_values && is_set && is_empty {
+                                errors.push(EvalError::Empty(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
                             let len = value.map(|s| s.chars().count()).unwrap_or(0);
                             result.push_str(&len.to_string());
                             substituted = true;
@@ -191,18 +206,63 @@ pub fn eval_nodes(
                             substituted = true;
                         }
                         Operator::PrefixStrip(greedy) => {
+                            if !is_set
+                                && (restrictions.require_values
+                                    || restrictions.require_nonempty_values)
+                            {
+                                errors.push(EvalError::Unset(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
+                            if restrictions.require_nonempty_values && is_set && is_empty {
+                                errors.push(EvalError::Empty(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
                             let pat = nodes_to_text(fallback.as_deref().unwrap_or(&[]));
                             let v = value.map(|s| s.as_str()).unwrap_or("");
                             result.push_str(glob::strip_prefix(v, &pat, *greedy));
                             substituted = true;
                         }
                         Operator::SuffixStrip(greedy) => {
+                            if !is_set
+                                && (restrictions.require_values
+                                    || restrictions.require_nonempty_values)
+                            {
+                                errors.push(EvalError::Unset(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
+                            if restrictions.require_nonempty_values && is_set && is_empty {
+                                errors.push(EvalError::Empty(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
                             let pat = nodes_to_text(fallback.as_deref().unwrap_or(&[]));
                             let v = value.map(|s| s.as_str()).unwrap_or("");
                             result.push_str(glob::strip_suffix(v, &pat, *greedy));
                             substituted = true;
                         }
                         Operator::Substring { offset, length } => {
+                            if !is_set
+                                && (restrictions.require_values
+                                    || restrictions.require_nonempty_values)
+                            {
+                                errors.push(EvalError::Unset(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
+                            if restrictions.require_nonempty_values && is_set && is_empty {
+                                errors.push(EvalError::Empty(display_name.clone()));
+                                if fail_fast {
+                                    return Err(errors);
+                                }
+                            }
                             let v = value.map(|s| s.as_str()).unwrap_or("");
                             let chars: Vec<char> = v.chars().collect();
                             let start = (*offset).min(chars.len());
