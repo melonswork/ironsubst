@@ -922,6 +922,26 @@ fn test_prefix_filter() {
     // Empty prefix = substitute everything (same as None)
     let r = process("${OTHER}", &env, relaxed, false, false, Some("")).unwrap();
     assert_eq!(r, "secret");
+
+    // Regression: substring offset/length variables that don't match the prefix
+    // were being coerced to 0 (via parse failure → unwrap_or(0)) rather than
+    // leaving the whole expression verbatim.
+    env.insert("APP_WORD".to_string(), "helloworld".to_string());
+    env.insert("OFFSET".to_string(), "5".to_string());
+    // OFFSET does not have the APP_ prefix → entire ${APP_WORD:$OFFSET} must be verbatim
+    let r = process(
+        "${APP_WORD:$OFFSET}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(
+        r, "${APP_WORD:$OFFSET}",
+        "non-matching index variable must leave the whole substring expression verbatim"
+    );
 }
 #[test]
 fn test_error_operator() {

@@ -278,23 +278,46 @@ pub fn eval_nodes(
                             substituted = true;
                         }
                         Operator::Substring { offset, length } => {
-                            if !is_set
-                                && (restrictions.require_values
-                                    || restrictions.require_nonempty_values)
-                            {
-                                errors.push(EvalError::Unset(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
+                            // If the prefix filter is active and any offset/length
+                            // node is a non-matching variable, evaluating it would
+                            // return verbatim source text (e.g. "$OFFSET") that
+                            // then silently coerces to 0. Preserve the whole
+                            // expression verbatim instead.
+                            let index_nodes_unmatched = prefix.is_some_and(|pfx| {
+                                offset
+                                    .iter()
+                                    .chain(length.as_deref().unwrap_or(&[]).iter())
+                                    .any(|n| {
+                                        matches!(n, Node::Variable { name: n, .. }
+                                                if !n.starts_with(pfx))
+                                    })
+                            });
+                            if index_nodes_unmatched {
+                                result.push_str(&original_text(name, *braced, operator, fallback));
+                                substituted = true;
+                            } else {
+                                if !is_set
+                                    && (restrictions.require_values
+                                        || restrictions.require_nonempty_values)
+                                {
+                                    errors.push(EvalError::Unset(display_name.clone()));
+                                    if fail_fast {
+                                        return Err(errors);
+                                    }
                                 }
-                            }
-                            if restrictions.require_nonempty_values && is_set && is_empty {
-                                errors.push(EvalError::Empty(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
+                                if restrictions.require_nonempty_values && is_set && is_empty {
+                                    errors.push(EvalError::Empty(display_name.clone()));
+                                    if fail_fast {
+                                        return Err(errors);
+                                    }
                                 }
-                            }
-                            let offset_str =
-                                match eval_nodes(offset, env, restrictions, fail_fast, prefix) {
+                                let offset_str = match eval_nodes(
+                                    offset,
+                                    env,
+                                    restrictions,
+                                    fail_fast,
+                                    prefix,
+                                ) {
                                     Ok(s) => s,
                                     Err(mut e) => {
                                         errors.append(&mut e);
@@ -304,37 +327,38 @@ pub fn eval_nodes(
                                         String::new()
                                     }
                                 };
-                            let offset_val = offset_str.trim().parse::<usize>().unwrap_or(0);
-                            let length_val = match length {
-                                Some(len_nodes) => {
-                                    let len_str = match eval_nodes(
-                                        len_nodes,
-                                        env,
-                                        restrictions,
-                                        fail_fast,
-                                        prefix,
-                                    ) {
-                                        Ok(s) => s,
-                                        Err(mut e) => {
-                                            errors.append(&mut e);
-                                            if fail_fast {
-                                                return Err(errors);
+                                let offset_val = offset_str.trim().parse::<usize>().unwrap_or(0);
+                                let length_val = match length {
+                                    Some(len_nodes) => {
+                                        let len_str = match eval_nodes(
+                                            len_nodes,
+                                            env,
+                                            restrictions,
+                                            fail_fast,
+                                            prefix,
+                                        ) {
+                                            Ok(s) => s,
+                                            Err(mut e) => {
+                                                errors.append(&mut e);
+                                                if fail_fast {
+                                                    return Err(errors);
+                                                }
+                                                String::new()
                                             }
-                                            String::new()
-                                        }
-                                    };
-                                    Some(len_str.trim().parse::<usize>().unwrap_or(0))
-                                }
-                                None => None,
-                            };
-                            let v = value.map(|s| s.as_str()).unwrap_or("");
-                            let chars: Vec<char> = v.chars().collect();
-                            let start = offset_val.min(chars.len());
-                            let end = length_val
-                                .map(|n| (start + n).min(chars.len()))
-                                .unwrap_or(chars.len());
-                            result.push_str(&chars[start..end].iter().collect::<String>());
-                            substituted = true;
+                                        };
+                                        Some(len_str.trim().parse::<usize>().unwrap_or(0))
+                                    }
+                                    None => None,
+                                };
+                                let v = value.map(|s| s.as_str()).unwrap_or("");
+                                let chars: Vec<char> = v.chars().collect();
+                                let start = offset_val.min(chars.len());
+                                let end = length_val
+                                    .map(|n| (start + n).min(chars.len()))
+                                    .unwrap_or(chars.len());
+                                result.push_str(&chars[start..end].iter().collect::<String>());
+                                substituted = true;
+                            } // end else (index_nodes_unmatched)
                         }
                     }
                 }
