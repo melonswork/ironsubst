@@ -89,18 +89,26 @@ impl<'a> Parser<'a> {
                         if !text_buf.is_empty() {
                             nodes.push(Node::Text(std::mem::take(&mut text_buf)));
                         }
-                        // Consume any trailing content before '}' (there should be
-                        // none for a well-formed ${#VAR}, but be defensive).
-                        let _ = self.parse_nodes(true, depth + 1)?;
-                        if self.next() != Some('}') {
-                            return Err(ParseError::UnclosedBrace);
+                        // If the name is empty (--no-digit rejected a digit start) or
+                        // there is trailing content before '}' (e.g. ${#FOO:-3}),
+                        // the expression is malformed — emit it verbatim.
+                        if name.is_empty() || self.peek() != Some('}') {
+                            let _ = self.parse_nodes(true, depth + 1)?;
+                            if self.next() != Some('}') {
+                                return Err(ParseError::UnclosedBrace);
+                            }
+                            nodes.push(Node::Text(self.input[start_pos..self.pos].to_string()));
+                        } else {
+                            if self.next() != Some('}') {
+                                return Err(ParseError::UnclosedBrace);
+                            }
+                            nodes.push(Node::Variable {
+                                name,
+                                braced: true,
+                                operator: Some(Operator::Length),
+                                fallback: None,
+                            });
                         }
-                        nodes.push(Node::Variable {
-                            name,
-                            braced: true,
-                            operator: Some(Operator::Length),
-                            fallback: None,
-                        });
                         continue;
                     }
                 }

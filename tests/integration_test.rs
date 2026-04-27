@@ -1090,6 +1090,33 @@ fn test_length_operator() {
 }
 
 #[test]
+fn test_length_operator_malformed_and_no_digit() {
+    // Regression: ${#VAR:-3} was silently treated as ${#VAR} (discarding :-3).
+    // And ${#1} with --no-digit was outputting 0 instead of being left verbatim.
+    let mut env = HashMap::new();
+    env.insert("FOO".to_string(), "abc".to_string());
+    let relaxed = Restrictions::default();
+
+    // ${#FOO:-3} has trailing content after the name — emit verbatim.
+    let r = process("${#FOO:-3}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(
+        r, "${#FOO:-3}",
+        "malformed length should be preserved verbatim"
+    );
+
+    // ${#1} with --no-digit: digit name rejected → emit verbatim.
+    let r = process("${#1}", &env, relaxed, true, false, None).unwrap();
+    assert_eq!(r, "${#1}", "--no-digit should leave ${{#1}} verbatim");
+
+    // Well-formed ${#FOO} with --no-digit still works (name starts with letter).
+    let r = process("${#FOO}", &env, relaxed, true, false, None).unwrap();
+    assert_eq!(
+        r, "3",
+        "well-formed ${{#VAR}} with --no-digit should still work"
+    );
+}
+
+#[test]
 fn test_prefix_suffix_strip() {
     let mut env = HashMap::new();
     env.insert("PATH_VAR".to_string(), "/usr/local/bin/node".to_string());
