@@ -10,7 +10,8 @@
 /// All other characters are matched literally. An unclosed `[` is treated as
 /// a literal `[`.
 pub fn glob_matches(pattern: &str, s: &str) -> bool {
-    glob_rec(pattern, s)
+    let mut memo = std::collections::HashMap::new();
+    glob_rec(pattern, s, &mut memo)
 }
 
 /// Strip the shortest (greedy=false) or longest (greedy=true) prefix of `s`
@@ -65,7 +66,24 @@ pub fn strip_suffix<'a>(s: &'a str, pattern: &str, greedy: bool) -> &'a str {
     s
 }
 
-fn glob_rec(p: &str, s: &str) -> bool {
+// Each recursive call receives suffixes of the original pattern and string,
+// so (p.len(), s.len()) uniquely identifies the subproblem within one
+// glob_matches invocation, making it a valid memoization key.
+fn glob_rec(p: &str, s: &str, memo: &mut std::collections::HashMap<(usize, usize), bool>) -> bool {
+    let key = (p.len(), s.len());
+    if let Some(&cached) = memo.get(&key) {
+        return cached;
+    }
+    let result = glob_inner(p, s, memo);
+    memo.insert(key, result);
+    result
+}
+
+fn glob_inner(
+    p: &str,
+    s: &str,
+    memo: &mut std::collections::HashMap<(usize, usize), bool>,
+) -> bool {
     if p.is_empty() {
         return s.is_empty();
     }
@@ -75,14 +93,14 @@ fn glob_rec(p: &str, s: &str) -> bool {
     match p_char {
         '*' => {
             // Match zero chars first (most efficient for the non-greedy case).
-            if glob_rec(p_rest, s) {
+            if glob_rec(p_rest, s, memo) {
                 return true;
             }
             let mut pos = 0;
             while pos < s.len() {
                 let c = s[pos..].chars().next().unwrap();
                 pos += c.len_utf8();
-                if glob_rec(p_rest, &s[pos..]) {
+                if glob_rec(p_rest, &s[pos..], memo) {
                     return true;
                 }
             }
@@ -93,7 +111,7 @@ fn glob_rec(p: &str, s: &str) -> bool {
                 return false;
             }
             let (_, s_rest) = split_first(s);
-            glob_rec(p_rest, s_rest)
+            glob_rec(p_rest, s_rest, memo)
         }
         '[' => {
             if s.is_empty() {
@@ -101,8 +119,8 @@ fn glob_rec(p: &str, s: &str) -> bool {
             }
             let (sc, s_rest) = split_first(s);
             match match_class(p_rest, sc) {
-                Some((ok, after_bracket)) => ok && glob_rec(after_bracket, s_rest),
-                None => sc == '[' && glob_rec(p_rest, s_rest),
+                Some((ok, after_bracket)) => ok && glob_rec(after_bracket, s_rest, memo),
+                None => sc == '[' && glob_rec(p_rest, s_rest, memo),
             }
         }
         pc => {
@@ -110,7 +128,7 @@ fn glob_rec(p: &str, s: &str) -> bool {
                 return false;
             }
             let (sc, s_rest) = split_first(s);
-            pc == sc && glob_rec(p_rest, s_rest)
+            pc == sc && glob_rec(p_rest, s_rest, memo)
         }
     }
 }
@@ -232,6 +250,15 @@ mod tests {
         assert_eq!(strip_suffix("file.tar.gz", ".*", false), "file.tar");
         assert_eq!(strip_suffix("file.tar.gz", ".gz", false), "file.tar");
         assert_eq!(strip_suffix("hello", "xyz", false), "hello");
+    }
+
+    #[test]
+    fn no_exponential_backtracking() {
+        // Without memoization, patterns with many consecutive stars cause
+        // exponential blowup — this would hang for seconds before the fix.
+        let pattern = "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*ab";
+        let s = "aaaaaaaaaaaaaaaaaaaaac";
+        assert!(!glob_matches(pattern, s)); // no match — must return promptly
     }
 
     #[test]
