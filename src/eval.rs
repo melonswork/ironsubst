@@ -82,20 +82,15 @@ pub fn eval_nodes(
                 if let Some(op) = operator {
                     match op {
                         Operator::Length => {
-                            if !is_set
-                                && (restrictions.require_values
-                                    || restrictions.require_nonempty_values)
-                            {
-                                errors.push(EvalError::Unset(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
-                                }
-                            }
-                            if restrictions.require_nonempty_values && is_set && is_empty {
-                                errors.push(EvalError::Empty(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
-                                }
+                            if check_restrictions(
+                                &display_name,
+                                is_set,
+                                is_empty,
+                                restrictions,
+                                fail_fast,
+                                &mut errors,
+                            ) {
+                                return Err(errors);
                             }
                             let len = value.map(|s| s.chars().count()).unwrap_or(0);
                             result.push_str(&len.to_string());
@@ -220,20 +215,15 @@ pub fn eval_nodes(
                                 result.push_str(&original_text(name, *braced, operator, fallback));
                                 substituted = true;
                             } else {
-                                if !is_set
-                                    && (restrictions.require_values
-                                        || restrictions.require_nonempty_values)
-                                {
-                                    errors.push(EvalError::Unset(display_name.clone()));
-                                    if fail_fast {
-                                        return Err(errors);
-                                    }
-                                }
-                                if restrictions.require_nonempty_values && is_set && is_empty {
-                                    errors.push(EvalError::Empty(display_name.clone()));
-                                    if fail_fast {
-                                        return Err(errors);
-                                    }
+                                if check_restrictions(
+                                    &display_name,
+                                    is_set,
+                                    is_empty,
+                                    restrictions,
+                                    fail_fast,
+                                    &mut errors,
+                                ) {
+                                    return Err(errors);
                                 }
                                 let pat = match eval_nodes(
                                     fallback.as_deref().unwrap_or(&[]),
@@ -267,20 +257,15 @@ pub fn eval_nodes(
                                 result.push_str(&original_text(name, *braced, operator, fallback));
                                 substituted = true;
                             } else {
-                                if !is_set
-                                    && (restrictions.require_values
-                                        || restrictions.require_nonempty_values)
-                                {
-                                    errors.push(EvalError::Unset(display_name.clone()));
-                                    if fail_fast {
-                                        return Err(errors);
-                                    }
-                                }
-                                if restrictions.require_nonempty_values && is_set && is_empty {
-                                    errors.push(EvalError::Empty(display_name.clone()));
-                                    if fail_fast {
-                                        return Err(errors);
-                                    }
+                                if check_restrictions(
+                                    &display_name,
+                                    is_set,
+                                    is_empty,
+                                    restrictions,
+                                    fail_fast,
+                                    &mut errors,
+                                ) {
+                                    return Err(errors);
                                 }
                                 let pat = match eval_nodes(
                                     fallback.as_deref().unwrap_or(&[]),
@@ -322,20 +307,15 @@ pub fn eval_nodes(
                                 result.push_str(&original_text(name, *braced, operator, fallback));
                                 substituted = true;
                             } else {
-                                if !is_set
-                                    && (restrictions.require_values
-                                        || restrictions.require_nonempty_values)
-                                {
-                                    errors.push(EvalError::Unset(display_name.clone()));
-                                    if fail_fast {
-                                        return Err(errors);
-                                    }
-                                }
-                                if restrictions.require_nonempty_values && is_set && is_empty {
-                                    errors.push(EvalError::Empty(display_name.clone()));
-                                    if fail_fast {
-                                        return Err(errors);
-                                    }
+                                if check_restrictions(
+                                    &display_name,
+                                    is_set,
+                                    is_empty,
+                                    restrictions,
+                                    fail_fast,
+                                    &mut errors,
+                                ) {
+                                    return Err(errors);
                                 }
                                 let offset_str = match eval_nodes(
                                     offset,
@@ -391,25 +371,15 @@ pub fn eval_nodes(
 
                 if !substituted {
                     // No operator fired — we are outputting the raw variable value.
-
-                    // Both require_values and require_nonempty_values treat an unset
-                    // variable as an error (unset expands to "", violating either
-                    // constraint). Unify into one check to avoid duplicate errors when
-                    // both flags are active.
-                    if !is_set
-                        && (restrictions.require_values || restrictions.require_nonempty_values)
-                    {
-                        errors.push(EvalError::Unset(display_name.clone()));
-                        if fail_fast {
-                            return Err(errors);
-                        }
-                    }
-
-                    if restrictions.require_nonempty_values && is_set && is_empty {
-                        errors.push(EvalError::Empty(display_name));
-                        if fail_fast {
-                            return Err(errors);
-                        }
+                    if check_restrictions(
+                        &display_name,
+                        is_set,
+                        is_empty,
+                        restrictions,
+                        fail_fast,
+                        &mut errors,
+                    ) {
+                        return Err(errors);
                     }
 
                     if let Some(v) = value {
@@ -425,6 +395,29 @@ pub fn eval_nodes(
     } else {
         Err(errors)
     }
+}
+
+fn check_restrictions(
+    display_name: &str,
+    is_set: bool,
+    is_empty: bool,
+    restrictions: Restrictions,
+    fail_fast: bool,
+    errors: &mut Vec<EvalError>,
+) -> bool {
+    if !is_set && (restrictions.require_values || restrictions.require_nonempty_values) {
+        errors.push(EvalError::Unset(display_name.to_string()));
+        if fail_fast {
+            return true;
+        }
+    }
+    if restrictions.require_nonempty_values && is_set && is_empty {
+        errors.push(EvalError::Empty(display_name.to_string()));
+        if fail_fast {
+            return true;
+        }
+    }
+    false
 }
 
 /// Reconstruct the original source text of a variable node so it can be
