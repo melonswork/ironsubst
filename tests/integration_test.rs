@@ -1164,6 +1164,22 @@ fn test_prefix_suffix_strip() {
     // Unset variable — treat as empty string, return ""
     let r = process("${NOTSET#prefix}", &env, relaxed, false, false, None).unwrap();
     assert_eq!(r, "");
+
+    // Regression: patterns containing variable references must be evaluated.
+    // ${VAR#$PAT} should expand $PAT before using the result as a glob pattern.
+    env.insert("PAT".to_string(), "*/".to_string());
+    let r = process("${PATH_VAR#$PAT}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(
+        r, "usr/local/bin/node",
+        "${{PATH_VAR#$PAT}} should expand PAT before matching"
+    );
+
+    env.insert("SUFFIX_PAT".to_string(), ".*".to_string());
+    let r = process("${FILENAME%$SUFFIX_PAT}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(
+        r, "file.tar",
+        "${{FILENAME%$SUFFIX_PAT}} should expand SUFFIX_PAT before matching"
+    );
 }
 
 #[test]

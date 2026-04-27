@@ -221,7 +221,22 @@ pub fn eval_nodes(
                                     return Err(errors);
                                 }
                             }
-                            let pat = nodes_to_text(fallback.as_deref().unwrap_or(&[]));
+                            let pat = match eval_nodes(
+                                fallback.as_deref().unwrap_or(&[]),
+                                env,
+                                restrictions,
+                                fail_fast,
+                                prefix,
+                            ) {
+                                Ok(s) => s,
+                                Err(mut e) => {
+                                    errors.append(&mut e);
+                                    if fail_fast {
+                                        return Err(errors);
+                                    }
+                                    String::new()
+                                }
+                            };
                             let v = value.map(|s| s.as_str()).unwrap_or("");
                             result.push_str(glob::strip_prefix(v, &pat, *greedy));
                             substituted = true;
@@ -242,7 +257,22 @@ pub fn eval_nodes(
                                     return Err(errors);
                                 }
                             }
-                            let pat = nodes_to_text(fallback.as_deref().unwrap_or(&[]));
+                            let pat = match eval_nodes(
+                                fallback.as_deref().unwrap_or(&[]),
+                                env,
+                                restrictions,
+                                fail_fast,
+                                prefix,
+                            ) {
+                                Ok(s) => s,
+                                Err(mut e) => {
+                                    errors.append(&mut e);
+                                    if fail_fast {
+                                        return Err(errors);
+                                    }
+                                    String::new()
+                                }
+                            };
                             let v = value.map(|s| s.as_str()).unwrap_or("");
                             result.push_str(glob::strip_suffix(v, &pat, *greedy));
                             substituted = true;
