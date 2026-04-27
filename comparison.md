@@ -6,7 +6,7 @@
 |------|------------------------|------------------------------|--------------------------------|---------------------------------|-----------------------------------|---------------------------------------|---------------------------------|-----------------------------------|---------------------------------|-----------------------------------|
 | **ironsubst (default)** | `""` | `fb` | `fb` | `fb` | `fb` | `""` | `""` | `""` | ERR(1): `UNSET_VAR: err` | ERR(1): `UNSET_VAR: err` |
 | **ironsubst --require-values** | ERR(1): `variable ${UNSET_VAR} ...` | `fb` | `fb` | `fb` | `fb` | `""` | `""` | `""` | ERR(1): `UNSET_VAR: err` | ERR(1): `UNSET_VAR: err` |
-| **ironsubst --require-nonempty-values** | `""` | `fb` | `fb` | `fb` | `fb` | `""` | `""` | `""` | ERR(1): `UNSET_VAR: err` | ERR(1): `UNSET_VAR: err` |
+| **ironsubst --require-nonempty-values** | ERR(1): `variable ${UNSET_VAR} ...` | `fb` | `fb` | `fb` | `fb` | `""` | `""` | `""` | ERR(1): `UNSET_VAR: err` | ERR(1): `UNSET_VAR: err` |
 | **a8m/envsubst (default)** | `""` | `fb` | `fb` | `fb` | `fb` | `""` | `""` | `""` | `""` | `""` |
 | **a8m/envsubst -no-unset** | ERR(1): `variable ${UNSET_VAR} ...` | `fb` | `fb` | `fb` | `fb` | ERR(1): `variable ${UNSET_VAR} ...` | `""` | `""` | ERR(1): `variable ${UNSET_VAR} ...` | ERR(1): `variable ${UNSET_VAR} ...` |
 | **a8m/envsubst -no-empty** | `""` | `fb` | `fb` | `fb` | `fb` | `""` | `""` | `""` | `""` | `""` |

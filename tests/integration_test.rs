@@ -909,6 +909,16 @@ fn test_prefix_filter() {
     let r = process("${OTHER:-$$}", &env, relaxed, false, false, Some("APP_")).unwrap();
     assert_eq!(r, "${OTHER:-$$}");
 
+    // Regression: bare `$` followed by a non-identifier (e.g. `$-`) in the fallback
+    // of a non-matching variable was being corrupted to `$$-` by the re-escaping pass
+    // in nodes_to_text.  The fix stores `$$` (encoded) in text nodes for real escapes
+    // and leaves bare `$` as-is, so reconstruction is lossless.
+    let r = process("${OTHER:-$-}", &env, relaxed, false, false, Some("APP_")).unwrap();
+    assert_eq!(
+        r, "${OTHER:-$-}",
+        "bare $- in fallback must not be corrupted to $$-"
+    );
+
     // Empty prefix = substitute everything (same as None)
     let r = process("${OTHER}", &env, relaxed, false, false, Some("")).unwrap();
     assert_eq!(r, "secret");

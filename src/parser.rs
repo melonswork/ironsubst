@@ -62,7 +62,9 @@ impl<'a> Parser<'a> {
                 if let Some(next_c) = self.peek() {
                     if next_c == '$' {
                         self.next();
-                        text_buf.push('$');
+                        // Store the encoded form so nodes_to_text can reproduce
+                        // the original `$$` without re-escaping unrelated bare `$`.
+                        text_buf.push_str("$$");
                         continue;
                     }
                 }

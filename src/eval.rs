@@ -48,7 +48,7 @@ pub fn eval_nodes(
 
     for node in nodes {
         match node {
-            Node::Text(t) => result.push_str(t),
+            Node::Text(t) => result.push_str(&t.replace("$$", "$")),
             Node::Variable {
                 name,
                 braced,
@@ -312,10 +312,10 @@ fn nodes_to_text(nodes: &[Node]) -> String {
     nodes
         .iter()
         .map(|n| match n {
-            // Re-escape literal `$` as `$$` so the output round-trips correctly.
-            // Text nodes store `$` for both `$$` (escape) and bare `$` followed
-            // by a non-identifier char — both need `$$` to survive re-parsing.
-            Node::Text(t) => t.replace('$', "$$"),
+            // Text nodes store `$$` for escaped dollars (from `$$` input) and
+            // a bare `$` for a dollar sign followed by a non-identifier char.
+            // Output as-is: `$$` round-trips correctly; bare `$` is preserved.
+            Node::Text(t) => t.clone(),
             Node::Variable {
                 name,
                 braced,
