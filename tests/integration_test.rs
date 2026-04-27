@@ -923,6 +923,53 @@ fn test_prefix_filter() {
     let r = process("${OTHER}", &env, relaxed, false, false, Some("")).unwrap();
     assert_eq!(r, "secret");
 
+    // Regression: strip-operator pattern variables that don't match the prefix
+    // were silently used as literal glob patterns (e.g. "$OTHER" as a pattern),
+    // which usually produces the original value unchanged but is semantically wrong.
+    env.insert("APP_FILE".to_string(), "helloworld".to_string());
+    env.insert("OTHER_PAT".to_string(), "hello".to_string());
+    // OTHER_PAT does not have the APP_ prefix → entire expression must be verbatim
+    let r = process(
+        "${APP_FILE#$OTHER_PAT}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(
+        r, "${APP_FILE#$OTHER_PAT}",
+        "non-matching pattern variable must leave the whole PrefixStrip expression verbatim"
+    );
+
+    let r = process(
+        "${APP_FILE%$OTHER_PAT}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(
+        r, "${APP_FILE%$OTHER_PAT}",
+        "non-matching pattern variable must leave the whole SuffixStrip expression verbatim"
+    );
+
+    // Matching pattern variable should still be evaluated normally
+    env.insert("APP_PAT".to_string(), "hello".to_string());
+    let r = process(
+        "${APP_FILE#$APP_PAT}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(r, "world", "matching pattern variable should be evaluated");
+
     // Regression: substring offset/length variables that don't match the prefix
     // were being coerced to 0 (via parse failure → unwrap_or(0)) rather than
     // leaving the whole expression verbatim.

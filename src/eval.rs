@@ -206,76 +206,102 @@ pub fn eval_nodes(
                             substituted = true;
                         }
                         Operator::PrefixStrip(greedy) => {
-                            if !is_set
-                                && (restrictions.require_values
-                                    || restrictions.require_nonempty_values)
-                            {
-                                errors.push(EvalError::Unset(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
-                                }
-                            }
-                            if restrictions.require_nonempty_values && is_set && is_empty {
-                                errors.push(EvalError::Empty(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
-                                }
-                            }
-                            let pat = match eval_nodes(
-                                fallback.as_deref().unwrap_or(&[]),
-                                env,
-                                restrictions,
-                                fail_fast,
-                                prefix,
-                            ) {
-                                Ok(s) => s,
-                                Err(mut e) => {
-                                    errors.append(&mut e);
+                            // Guard: a non-matching variable in the pattern position
+                            // would be returned verbatim (e.g. "$PAT") and then used
+                            // as a literal glob pattern rather than its value.
+                            // Emit the whole expression verbatim instead.
+                            let pattern_unmatched = prefix.is_some_and(|pfx| {
+                                fallback.as_deref().unwrap_or(&[]).iter().any(|n| {
+                                    matches!(n, Node::Variable { name: n, .. }
+                                        if !n.starts_with(pfx))
+                                })
+                            });
+                            if pattern_unmatched {
+                                result.push_str(&original_text(name, *braced, operator, fallback));
+                                substituted = true;
+                            } else {
+                                if !is_set
+                                    && (restrictions.require_values
+                                        || restrictions.require_nonempty_values)
+                                {
+                                    errors.push(EvalError::Unset(display_name.clone()));
                                     if fail_fast {
                                         return Err(errors);
                                     }
-                                    String::new()
                                 }
-                            };
-                            let v = value.map(|s| s.as_str()).unwrap_or("");
-                            result.push_str(glob::strip_prefix(v, &pat, *greedy));
-                            substituted = true;
+                                if restrictions.require_nonempty_values && is_set && is_empty {
+                                    errors.push(EvalError::Empty(display_name.clone()));
+                                    if fail_fast {
+                                        return Err(errors);
+                                    }
+                                }
+                                let pat = match eval_nodes(
+                                    fallback.as_deref().unwrap_or(&[]),
+                                    env,
+                                    restrictions,
+                                    fail_fast,
+                                    prefix,
+                                ) {
+                                    Ok(s) => s,
+                                    Err(mut e) => {
+                                        errors.append(&mut e);
+                                        if fail_fast {
+                                            return Err(errors);
+                                        }
+                                        String::new()
+                                    }
+                                };
+                                let v = value.map(|s| s.as_str()).unwrap_or("");
+                                result.push_str(glob::strip_prefix(v, &pat, *greedy));
+                                substituted = true;
+                            } // end else (pattern_unmatched)
                         }
                         Operator::SuffixStrip(greedy) => {
-                            if !is_set
-                                && (restrictions.require_values
-                                    || restrictions.require_nonempty_values)
-                            {
-                                errors.push(EvalError::Unset(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
-                                }
-                            }
-                            if restrictions.require_nonempty_values && is_set && is_empty {
-                                errors.push(EvalError::Empty(display_name.clone()));
-                                if fail_fast {
-                                    return Err(errors);
-                                }
-                            }
-                            let pat = match eval_nodes(
-                                fallback.as_deref().unwrap_or(&[]),
-                                env,
-                                restrictions,
-                                fail_fast,
-                                prefix,
-                            ) {
-                                Ok(s) => s,
-                                Err(mut e) => {
-                                    errors.append(&mut e);
+                            let pattern_unmatched = prefix.is_some_and(|pfx| {
+                                fallback.as_deref().unwrap_or(&[]).iter().any(|n| {
+                                    matches!(n, Node::Variable { name: n, .. }
+                                        if !n.starts_with(pfx))
+                                })
+                            });
+                            if pattern_unmatched {
+                                result.push_str(&original_text(name, *braced, operator, fallback));
+                                substituted = true;
+                            } else {
+                                if !is_set
+                                    && (restrictions.require_values
+                                        || restrictions.require_nonempty_values)
+                                {
+                                    errors.push(EvalError::Unset(display_name.clone()));
                                     if fail_fast {
                                         return Err(errors);
                                     }
-                                    String::new()
                                 }
-                            };
-                            let v = value.map(|s| s.as_str()).unwrap_or("");
-                            result.push_str(glob::strip_suffix(v, &pat, *greedy));
-                            substituted = true;
+                                if restrictions.require_nonempty_values && is_set && is_empty {
+                                    errors.push(EvalError::Empty(display_name.clone()));
+                                    if fail_fast {
+                                        return Err(errors);
+                                    }
+                                }
+                                let pat = match eval_nodes(
+                                    fallback.as_deref().unwrap_or(&[]),
+                                    env,
+                                    restrictions,
+                                    fail_fast,
+                                    prefix,
+                                ) {
+                                    Ok(s) => s,
+                                    Err(mut e) => {
+                                        errors.append(&mut e);
+                                        if fail_fast {
+                                            return Err(errors);
+                                        }
+                                        String::new()
+                                    }
+                                };
+                                let v = value.map(|s| s.as_str()).unwrap_or("");
+                                result.push_str(glob::strip_suffix(v, &pat, *greedy));
+                                substituted = true;
+                            } // end else (pattern_unmatched)
                         }
                         Operator::Substring { offset, length } => {
                             // If the prefix filter is active and any offset/length
