@@ -1416,4 +1416,9 @@ fn test_unsupported_operator_preserved_verbatim() {
     // Case modification — not implemented
     let r = process("${FOO^^}", &env, relaxed, false, false, None).unwrap();
     assert_eq!(r, "${FOO^^}");
+
+    // Negative offset with leading space: ${VAR: -5} — POSIX form, not implemented.
+    // The space before the minus disambiguates from ${VAR:-default}; preserved verbatim.
+    let r = process("${FOO: -3}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "${FOO: -3}");
 }

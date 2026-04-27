@@ -206,6 +206,10 @@ mod tests {
         assert!(glob_matches("[!abc]", "d"));
         assert!(!glob_matches("[!abc]", "a"));
         assert!(glob_matches("[^abc]", "d"));
+        assert!(glob_matches("[!a-z]", "M")); // negated range: uppercase passes
+        assert!(!glob_matches("[!a-z]", "m")); // negated range: lowercase fails
+        assert!(glob_matches("[^a-z]", "M")); // ^ synonym for !
+        assert!(glob_matches("[abc", "[abc")); // unclosed bracket treated as literal '['
     }
 
     #[test]
