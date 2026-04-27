@@ -989,6 +989,44 @@ fn test_prefix_filter() {
         r, "${APP_WORD:$OFFSET}",
         "non-matching index variable must leave the whole substring expression verbatim"
     );
+
+    // Regression: the unmatched-variable guard was shallow — it only checked
+    // direct children of the pattern/index node list, not nested variables.
+    // A nested non-matching variable (e.g. inside a fallback) still caused the
+    // expression to evaluate incorrectly instead of being left verbatim.
+
+    // ${APP_WORD#${APP_PAT:-$OTHER}}: APP_PAT matches, but its fallback $OTHER
+    // does not → the whole strip expression must be verbatim.
+    let r = process(
+        "${APP_WORD#${APP_PAT:-$OTHER}}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(
+        r, "${APP_WORD#${APP_PAT:-$OTHER}}",
+        "nested non-matching var in pattern fallback must leave the whole strip expression verbatim"
+    );
+
+    // ${APP_WORD:${APP_OFFSET:-$OTHER}}: APP_OFFSET matches, but its fallback
+    // $OTHER does not → the whole substring expression must be verbatim.
+    env.insert("APP_OFFSET".to_string(), "5".to_string());
+    let r = process(
+        "${APP_WORD:${APP_OFFSET:-$OTHER}}",
+        &env,
+        relaxed,
+        false,
+        false,
+        Some("APP_"),
+    )
+    .unwrap();
+    assert_eq!(
+        r, "${APP_WORD:${APP_OFFSET:-$OTHER}}",
+        "nested non-matching var in index fallback must leave the whole substring expression verbatim"
+    );
 }
 #[test]
 fn test_error_operator() {

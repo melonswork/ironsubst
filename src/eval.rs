@@ -197,10 +197,7 @@ pub fn eval_nodes(
                             // as a literal glob pattern rather than its value.
                             // Emit the whole expression verbatim instead.
                             let pattern_unmatched = prefix.is_some_and(|pfx| {
-                                fallback.as_deref().unwrap_or(&[]).iter().any(|n| {
-                                    matches!(n, Node::Variable { name: n, .. }
-                                        if !n.starts_with(pfx))
-                                })
+                                contains_unmatched_var(fallback.as_deref().unwrap_or(&[]), pfx)
                             });
                             if pattern_unmatched {
                                 result.push_str(&original_text(name, *braced, operator, fallback));
@@ -234,10 +231,7 @@ pub fn eval_nodes(
                         }
                         Operator::SuffixStrip(greedy) => {
                             let pattern_unmatched = prefix.is_some_and(|pfx| {
-                                fallback.as_deref().unwrap_or(&[]).iter().any(|n| {
-                                    matches!(n, Node::Variable { name: n, .. }
-                                        if !n.starts_with(pfx))
-                                })
+                                contains_unmatched_var(fallback.as_deref().unwrap_or(&[]), pfx)
                             });
                             if pattern_unmatched {
                                 result.push_str(&original_text(name, *braced, operator, fallback));
@@ -276,13 +270,10 @@ pub fn eval_nodes(
                             // then silently coerces to 0. Preserve the whole
                             // expression verbatim instead.
                             let index_nodes_unmatched = prefix.is_some_and(|pfx| {
-                                offset
-                                    .iter()
-                                    .chain(length.as_deref().unwrap_or(&[]).iter())
-                                    .any(|n| {
-                                        matches!(n, Node::Variable { name: n, .. }
-                                                if !n.starts_with(pfx))
-                                    })
+                                contains_unmatched_var(offset, pfx)
+                                    || length
+                                        .as_deref()
+                                        .is_some_and(|l| contains_unmatched_var(l, pfx))
                             });
                             if index_nodes_unmatched {
                                 result.push_str(&original_text(name, *braced, operator, fallback));
@@ -366,6 +357,40 @@ pub fn eval_nodes(
     } else {
         Err(errors)
     }
+}
+
+/// Returns true if any `Node::Variable` in `nodes` (recursively, including
+/// fallbacks and Substring offset/length sub-trees) has a name that does not
+/// start with `prefix`. Used by the prefix-filter guards to decide whether
+/// a nested pattern or index expression is safe to evaluate.
+fn contains_unmatched_var(nodes: &[Node], prefix: &str) -> bool {
+    nodes.iter().any(|n| match n {
+        Node::Text(_) => false,
+        Node::Variable {
+            name,
+            operator,
+            fallback,
+            ..
+        } => {
+            if !name.starts_with(prefix) {
+                return true;
+            }
+            if let Some(Operator::Substring { offset, length }) = operator {
+                if contains_unmatched_var(offset, prefix) {
+                    return true;
+                }
+                if length
+                    .as_deref()
+                    .is_some_and(|l| contains_unmatched_var(l, prefix))
+                {
+                    return true;
+                }
+            }
+            fallback
+                .as_deref()
+                .is_some_and(|fb| contains_unmatched_var(fb, prefix))
+        }
+    })
 }
 
 fn eval_to_string(
