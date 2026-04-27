@@ -1,0 +1,49 @@
+name: Copilot Setup Steps
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+  MISE_LOCKFILE: 1
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Restore the same cargo cache that CI warms on every master push.
+      # save-if: false — only read; don't write back from a Copilot working branch.
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: "ironsubst"
+          save-if: "false"
+
+      # Restore the pinned Rust toolchain from the same key CI uses.
+      - name: Cache Rust toolchain components
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.rustup/toolchains
+          key: rustup-${{ runner.os }}-${{ hashFiles('mise.lock') }}
+
+      # Install all tools declared in mise.toml at the exact locked versions.
+      - name: Setup tools with mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+
+      # workaround for https://github.com/jdx/mise-action/issues/184
+      - name: Install Rust components
+        run: rustup component add rustfmt clippy llvm-tools-preview
+
+      # Pre-fetch crate dependencies so Copilot's first `cargo build`/`cargo test`
+      # doesn't stall on network I/O.
+      - name: Pre-fetch dependencies
+        run: cargo fetch
