@@ -1218,6 +1218,29 @@ fn test_substring_operator() {
     // Unicode: offset counts chars not bytes
     let r = process("${UNICODE:1:3}", &env, relaxed, false, false, None).unwrap();
     assert_eq!(r, "éll");
+
+    // Regression: offset/length must be evaluated, not treated as literal source text.
+    // ${WORD:$OFFSET} with OFFSET=5 should produce "world", not "${WORD:$OFFSET}".
+    env.insert("OFFSET".to_string(), "5".to_string());
+    env.insert("LEN".to_string(), "3".to_string());
+
+    let r = process("${WORD:$OFFSET}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(
+        r, "world",
+        "${{WORD:$OFFSET}} with OFFSET=5 should equal ${{WORD:5}}"
+    );
+
+    let r = process("${WORD:2:$LEN}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "llo", "literal offset with variable length");
+
+    let r = process("${WORD:$OFFSET:$LEN}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "wor", "both offset and length as variables");
+
+    // Non-numeric offset evaluates to 0 (bash treats bad arithmetic as error;
+    // we fall back to 0 since we do not implement full arithmetic evaluation).
+    env.insert("BADOFFSET".to_string(), "abc".to_string());
+    let r = process("${WORD:$BADOFFSET}", &env, relaxed, false, false, None).unwrap();
+    assert_eq!(r, "helloworld", "non-numeric offset treated as 0");
 }
 
 #[test]

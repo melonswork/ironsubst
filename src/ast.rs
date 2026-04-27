@@ -8,8 +8,8 @@ pub enum Operator {
     PrefixStrip(bool), // #, ## (bool = greedy/longest)
     SuffixStrip(bool), // %, %% (bool = greedy/longest)
     Substring {
-        offset: usize,
-        length: Option<usize>,
+        offset: Vec<Node>,
+        length: Option<Vec<Node>>,
     },
 }
 

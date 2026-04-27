@@ -40,6 +40,21 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_nodes(&mut self, in_braces: bool, depth: usize) -> Result<Vec<Node>, ParseError> {
+        self.parse_nodes_inner(in_braces, false, depth)
+    }
+
+    // Like parse_nodes but also stops at ':' when stop_on_colon is true.
+    // Used for parsing substring offset/length expressions inside ${VAR:N:M}.
+    fn parse_nodes_until_colon(&mut self, depth: usize) -> Result<Vec<Node>, ParseError> {
+        self.parse_nodes_inner(true, true, depth)
+    }
+
+    fn parse_nodes_inner(
+        &mut self,
+        in_braces: bool,
+        stop_on_colon: bool,
+        depth: usize,
+    ) -> Result<Vec<Node>, ParseError> {
         if depth > MAX_DEPTH {
             return Err(ParseError::TooDeep);
         }
@@ -48,6 +63,9 @@ impl<'a> Parser<'a> {
 
         while let Some(c) = self.peek() {
             if in_braces && c == '}' {
+                break;
+            }
+            if stop_on_colon && c == ':' {
                 break;
             }
 
@@ -188,15 +206,17 @@ impl<'a> Parser<'a> {
                                         operator = Some(Operator::SuffixStrip(greedy));
                                         valid_op = true;
                                     }
-                                    // ${VAR:N} / ${VAR:N:M} — substring. Only fires
-                                    // when the colon was already consumed and the
-                                    // next char is a digit. `:-` / `:=` / `:+` / `:?`
-                                    // are handled by the arms above and are unambiguous.
-                                    _ if colon && op_type.is_ascii_digit() => {
-                                        let offset = self.read_integer();
+                                    // ${VAR:N} / ${VAR:N:M} — substring. Fires when
+                                    // the colon was already consumed and the next
+                                    // char is a digit or '$' (variable reference).
+                                    // `:-` / `:=` / `:+` / `:?` are handled above.
+                                    // Other colon forms (e.g. `${VAR: -5}`) fall
+                                    // through to the verbatim path.
+                                    _ if colon && (op_type.is_ascii_digit() || op_type == '$') => {
+                                        let offset = self.parse_nodes_until_colon(depth + 1)?;
                                         let length = if self.peek() == Some(':') {
-                                            self.next();
-                                            Some(self.read_integer())
+                                            self.next(); // consume ':'
+                                            Some(self.parse_nodes_until_colon(depth + 1)?)
                                         } else {
                                             None
                                         };
@@ -258,20 +278,6 @@ impl<'a> Parser<'a> {
         }
 
         Ok(nodes)
-    }
-
-    fn read_integer(&mut self) -> usize {
-        let mut n: usize = 0;
-        while let Some(c) = self.peek() {
-            if !c.is_ascii_digit() {
-                break;
-            }
-            self.next();
-            n = n
-                .saturating_mul(10)
-                .saturating_add(c as usize - '0' as usize);
-        }
-        n
     }
 
     fn read_var_name(&mut self) -> String {

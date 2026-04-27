@@ -293,10 +293,44 @@ pub fn eval_nodes(
                                     return Err(errors);
                                 }
                             }
+                            let offset_str =
+                                match eval_nodes(offset, env, restrictions, fail_fast, prefix) {
+                                    Ok(s) => s,
+                                    Err(mut e) => {
+                                        errors.append(&mut e);
+                                        if fail_fast {
+                                            return Err(errors);
+                                        }
+                                        String::new()
+                                    }
+                                };
+                            let offset_val = offset_str.trim().parse::<usize>().unwrap_or(0);
+                            let length_val = match length {
+                                Some(len_nodes) => {
+                                    let len_str = match eval_nodes(
+                                        len_nodes,
+                                        env,
+                                        restrictions,
+                                        fail_fast,
+                                        prefix,
+                                    ) {
+                                        Ok(s) => s,
+                                        Err(mut e) => {
+                                            errors.append(&mut e);
+                                            if fail_fast {
+                                                return Err(errors);
+                                            }
+                                            String::new()
+                                        }
+                                    };
+                                    Some(len_str.trim().parse::<usize>().unwrap_or(0))
+                                }
+                                None => None,
+                            };
                             let v = value.map(|s| s.as_str()).unwrap_or("");
                             let chars: Vec<char> = v.chars().collect();
-                            let start = (*offset).min(chars.len());
-                            let end = length
+                            let start = offset_val.min(chars.len());
+                            let end = length_val
                                 .map(|n| (start + n).min(chars.len()))
                                 .unwrap_or(chars.len());
                             result.push_str(&chars[start..end].iter().collect::<String>());
@@ -382,10 +416,13 @@ fn original_text(
                 "%".to_string()
             }
         }
-        Some(Operator::Substring { offset, length }) => match length {
-            None => format!(":{offset}"),
-            Some(n) => format!(":{offset}:{n}"),
-        },
+        Some(Operator::Substring { offset, length }) => {
+            let offset_str = nodes_to_text(offset);
+            match length {
+                None => format!(":{offset_str}"),
+                Some(len_nodes) => format!(":{offset_str}:{}", nodes_to_text(len_nodes)),
+            }
+        }
     };
 
     let fallback_str = match fallback {
