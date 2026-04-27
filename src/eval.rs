@@ -103,21 +103,18 @@ pub fn eval_nodes(
                         Operator::Default(colon) | Operator::Assign(colon) => {
                             if !is_set || (*colon && is_empty) {
                                 if let Some(fallback_nodes) = fallback {
-                                    match eval_nodes(
+                                    let s = match eval_to_string(
                                         fallback_nodes,
                                         env,
                                         restrictions,
                                         fail_fast,
                                         prefix,
+                                        &mut errors,
                                     ) {
-                                        Ok(s) => result.push_str(&s),
-                                        Err(mut e) => {
-                                            errors.append(&mut e);
-                                            if fail_fast {
-                                                return Err(errors);
-                                            }
-                                        }
-                                    }
+                                        Some(s) => s,
+                                        None => return Err(errors),
+                                    };
+                                    result.push_str(&s);
                                 }
                                 substituted = true;
                             }
@@ -131,21 +128,18 @@ pub fn eval_nodes(
                             let fires = if *colon { is_set && !is_empty } else { is_set };
                             if fires {
                                 if let Some(fallback_nodes) = fallback {
-                                    match eval_nodes(
+                                    let s = match eval_to_string(
                                         fallback_nodes,
                                         env,
                                         restrictions,
                                         fail_fast,
                                         prefix,
+                                        &mut errors,
                                     ) {
-                                        Ok(s) => result.push_str(&s),
-                                        Err(mut e) => {
-                                            errors.append(&mut e);
-                                            if fail_fast {
-                                                return Err(errors);
-                                            }
-                                        }
-                                    }
+                                        Some(s) => s,
+                                        None => return Err(errors),
+                                    };
+                                    result.push_str(&s);
                                 }
                             }
                             substituted = true;
@@ -156,21 +150,18 @@ pub fn eval_nodes(
                             if !is_set || (*colon && is_empty) {
                                 let mut err_msg = String::new();
                                 if let Some(fallback_nodes) = fallback {
-                                    match eval_nodes(
+                                    let s = match eval_to_string(
                                         fallback_nodes,
                                         env,
                                         restrictions,
                                         fail_fast,
                                         prefix,
+                                        &mut errors,
                                     ) {
-                                        Ok(s) => err_msg = s,
-                                        Err(mut e) => {
-                                            errors.append(&mut e);
-                                            if fail_fast {
-                                                return Err(errors);
-                                            }
-                                        }
-                                    }
+                                        Some(s) => s,
+                                        None => return Err(errors),
+                                    };
+                                    err_msg = s;
                                 }
 
                                 if err_msg.is_empty() {
@@ -225,21 +216,16 @@ pub fn eval_nodes(
                                 ) {
                                     return Err(errors);
                                 }
-                                let pat = match eval_nodes(
+                                let pat = match eval_to_string(
                                     fallback.as_deref().unwrap_or(&[]),
                                     env,
                                     restrictions,
                                     fail_fast,
                                     prefix,
+                                    &mut errors,
                                 ) {
-                                    Ok(s) => s,
-                                    Err(mut e) => {
-                                        errors.append(&mut e);
-                                        if fail_fast {
-                                            return Err(errors);
-                                        }
-                                        String::new()
-                                    }
+                                    Some(s) => s,
+                                    None => return Err(errors),
                                 };
                                 let v = value.map(|s| s.as_str()).unwrap_or("");
                                 result.push_str(glob::strip_prefix(v, &pat, *greedy));
@@ -267,21 +253,16 @@ pub fn eval_nodes(
                                 ) {
                                     return Err(errors);
                                 }
-                                let pat = match eval_nodes(
+                                let pat = match eval_to_string(
                                     fallback.as_deref().unwrap_or(&[]),
                                     env,
                                     restrictions,
                                     fail_fast,
                                     prefix,
+                                    &mut errors,
                                 ) {
-                                    Ok(s) => s,
-                                    Err(mut e) => {
-                                        errors.append(&mut e);
-                                        if fail_fast {
-                                            return Err(errors);
-                                        }
-                                        String::new()
-                                    }
+                                    Some(s) => s,
+                                    None => return Err(errors),
                                 };
                                 let v = value.map(|s| s.as_str()).unwrap_or("");
                                 result.push_str(glob::strip_suffix(v, &pat, *greedy));
@@ -317,40 +298,30 @@ pub fn eval_nodes(
                                 ) {
                                     return Err(errors);
                                 }
-                                let offset_str = match eval_nodes(
+                                let offset_str = match eval_to_string(
                                     offset,
                                     env,
                                     restrictions,
                                     fail_fast,
                                     prefix,
+                                    &mut errors,
                                 ) {
-                                    Ok(s) => s,
-                                    Err(mut e) => {
-                                        errors.append(&mut e);
-                                        if fail_fast {
-                                            return Err(errors);
-                                        }
-                                        String::new()
-                                    }
+                                    Some(s) => s,
+                                    None => return Err(errors),
                                 };
                                 let offset_val = offset_str.trim().parse::<usize>().unwrap_or(0);
                                 let length_val = match length {
                                     Some(len_nodes) => {
-                                        let len_str = match eval_nodes(
+                                        let len_str = match eval_to_string(
                                             len_nodes,
                                             env,
                                             restrictions,
                                             fail_fast,
                                             prefix,
+                                            &mut errors,
                                         ) {
-                                            Ok(s) => s,
-                                            Err(mut e) => {
-                                                errors.append(&mut e);
-                                                if fail_fast {
-                                                    return Err(errors);
-                                                }
-                                                String::new()
-                                            }
+                                            Some(s) => s,
+                                            None => return Err(errors),
                                         };
                                         Some(len_str.trim().parse::<usize>().unwrap_or(0))
                                     }
@@ -394,6 +365,26 @@ pub fn eval_nodes(
         Ok(result)
     } else {
         Err(errors)
+    }
+}
+
+fn eval_to_string(
+    nodes: &[Node],
+    env: &HashMap<String, String>,
+    restrictions: Restrictions,
+    fail_fast: bool,
+    prefix: Option<&str>,
+    errors: &mut Vec<EvalError>,
+) -> Option<String> {
+    match eval_nodes(nodes, env, restrictions, fail_fast, prefix) {
+        Ok(s) => Some(s),
+        Err(mut e) => {
+            errors.append(&mut e);
+            if fail_fast {
+                return None;
+            }
+            Some(String::new())
+        }
     }
 }
 
