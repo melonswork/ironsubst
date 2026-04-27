@@ -74,7 +74,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: " bar",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -83,7 +83,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: " bar",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -283,7 +283,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -301,7 +301,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -319,7 +319,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -328,7 +328,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -337,7 +337,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -346,7 +346,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -382,7 +382,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
             // EMPTY is empty + colon → fallback fires; $NOTSET bare+unset → error
         },
@@ -401,7 +401,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
             // EMPTY is empty + colon → fallback fires; $NOTSET bare+unset → error
         },
@@ -411,7 +411,7 @@ fn get_tests() -> Vec<ParseTest> {
             expected: "",
             has_err_relaxed: false,
             has_err_require_values: true,
-            has_err_no_empty: false,
+            has_err_no_empty: true,
             has_err_strict: true,
         },
         ParseTest {
@@ -733,6 +733,69 @@ fn test_require_values_dedicated() {
         msg.lines().count(),
         1,
         "fail_fast should produce a single error"
+    );
+}
+
+#[test]
+fn test_require_nonempty_values_fails_on_unset() {
+    // Regression: --require-nonempty-values was silently allowing unset variables
+    // through (exiting 0) because the check was guarded by `is_set && is_empty`
+    // rather than also catching the `!is_set` case.
+    let env = get_fake_env();
+    let restrictions = Restrictions {
+        require_values: false,
+        require_nonempty_values: true,
+    };
+
+    // Bare unset variable must fail — unset expands to "", violating the constraint.
+    let r = process("$NOTSET", &env, restrictions, false, false, None);
+    assert!(
+        r.is_err(),
+        "unset bare variable should error with --require-nonempty-values"
+    );
+    let msg = r.unwrap_err().to_string();
+    assert!(msg.contains("not set"), "error should say 'not set'");
+
+    // Braced unset variable must also fail.
+    let r = process("${NOTSET}", &env, restrictions, false, false, None);
+    assert!(
+        r.is_err(),
+        "unset braced variable should error with --require-nonempty-values"
+    );
+
+    // Unset with a fallback fires the fallback — no error.
+    let r = process(
+        "${NOTSET:-fallback}",
+        &env,
+        restrictions,
+        false,
+        false,
+        None,
+    );
+    assert_eq!(r.unwrap(), "fallback", "unset + fallback should succeed");
+
+    // Empty variable (is_set, is_empty) must still fail.
+    let r = process("$EMPTY", &env, restrictions, false, false, None);
+    assert!(
+        r.is_err(),
+        "empty variable should error with --require-nonempty-values"
+    );
+
+    // Set, non-empty variable must succeed.
+    let r = process("$BAR", &env, restrictions, false, false, None);
+    assert_eq!(r.unwrap(), "bar");
+
+    // Both flags active + unset → single Unset error (not duplicated).
+    let both = Restrictions {
+        require_values: true,
+        require_nonempty_values: true,
+    };
+    let r = process("$NOTSET", &env, both, false, false, None);
+    assert!(r.is_err());
+    assert_eq!(
+        r.unwrap_err().to_string().lines().count(),
+        1,
+        "both flags active should produce exactly one error for an unset variable"
     );
 }
 

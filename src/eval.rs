@@ -218,7 +218,13 @@ pub fn eval_nodes(
                 if !substituted {
                     // No operator fired — we are outputting the raw variable value.
 
-                    if restrictions.require_values && !is_set {
+                    // Both require_values and require_nonempty_values treat an unset
+                    // variable as an error (unset expands to "", violating either
+                    // constraint). Unify into one check to avoid duplicate errors when
+                    // both flags are active.
+                    if !is_set
+                        && (restrictions.require_values || restrictions.require_nonempty_values)
+                    {
                         errors.push(EvalError::Unset(display_name.clone()));
                         if fail_fast {
                             return Err(errors);
