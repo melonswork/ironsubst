@@ -39,7 +39,7 @@ A fast, configurable env**iron**ment variable **subst**itution tool written in R
 ### With Cargo (Rust)
 
 ```bash
-cargo install --git https://github.com/melonswork/ironsubst.git
+cargo install --locked --git https://github.com/melonswork/ironsubst.git
 ```
 
 ### With Docker (GHCR)
