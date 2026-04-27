@@ -20,6 +20,10 @@ url = "https://github.com/nektos/act/releases/download/v0.2.87/act_Darwin_arm64.
 checksum = "sha256:41077f98142b02e0bb45b181f57a068f6af86ce887d578a4da1a901b1d8f240a"
 url = "https://github.com/nektos/act/releases/download/v0.2.87/act_Darwin_x86_64.tar.gz"
 
+[[tools.actionlint]]
+version = "1.7.12"
+backend = "aqua:rhysd/actionlint"
+
 [[tools."cargo:cargo-audit"]]
 version = "0.22.1"
 backend = "cargo:cargo-audit"
