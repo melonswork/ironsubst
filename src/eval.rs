@@ -435,7 +435,7 @@ fn original_text(
         Some(Operator::Substitute(colon)) => format!("{}+", if *colon { ":" } else { "" }),
         Some(Operator::Error(colon)) => format!("{}?", if *colon { ":" } else { "" }),
         // Length uses a different form: ${#name} rather than ${name#}
-        Some(Operator::Length) => return format!("${{{}{}}}", "#", name),
+        Some(Operator::Length) => return format!("${{#{name}}}"),
         Some(Operator::PrefixStrip(g)) => {
             if *g {
                 "##".to_string()
