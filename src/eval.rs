@@ -148,6 +148,7 @@ pub fn eval_nodes(
                         // variable is unset (or empty for the colon form).
                         Operator::Error(colon) => {
                             if !is_set || (*colon && is_empty) {
+                                let errors_before = errors.len();
                                 let mut err_msg = String::new();
                                 if let Some(fallback_nodes) = fallback {
                                     let s = match eval_to_string(
@@ -164,22 +165,31 @@ pub fn eval_nodes(
                                     err_msg = s;
                                 }
 
-                                if err_msg.is_empty() {
-                                    err_msg = if *colon {
-                                        "parameter null or not set".to_string()
-                                    } else {
-                                        "parameter not set".to_string()
-                                    };
-                                }
+                                // If the fallback itself produced errors, those are the
+                                // relevant errors — don't also emit a generic outer error.
+                                if errors.len() == errors_before {
+                                    if err_msg.is_empty() {
+                                        err_msg = if *colon {
+                                            "parameter null or not set".to_string()
+                                        } else {
+                                            "parameter not set".to_string()
+                                        };
+                                    }
 
-                                // Bash omits braces from the parameter name in the error output
-                                let unbraced_name = display_name
-                                    .trim_start_matches("${")
-                                    .trim_start_matches('$')
-                                    .trim_end_matches('}');
-                                errors.push(EvalError::Custom(unbraced_name.to_string(), err_msg));
+                                    // Bash omits braces from the parameter name in the error output
+                                    let unbraced_name = display_name
+                                        .trim_start_matches("${")
+                                        .trim_start_matches('$')
+                                        .trim_end_matches('}');
+                                    errors.push(EvalError::Custom(
+                                        unbraced_name.to_string(),
+                                        err_msg,
+                                    ));
 
-                                if fail_fast {
+                                    if fail_fast {
+                                        return Err(errors);
+                                    }
+                                } else if fail_fast {
                                     return Err(errors);
                                 }
                             } else if let Some(v) = value {

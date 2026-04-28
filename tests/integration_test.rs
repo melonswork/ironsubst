@@ -1116,6 +1116,28 @@ fn test_error_operator() {
     )
     .unwrap_err();
     assert_eq!(err.to_string(), "EMPTY: parameter null or not set");
+
+    // When the fallback itself errors (e.g. references another unset var under
+    // require_values), only the fallback's error should be reported — not a
+    // second generic "parameter not set" on top of it.
+    let restrictions = Restrictions {
+        require_values: true,
+        require_nonempty_values: false,
+    };
+    let err = process(
+        "${UNSET?$ALSO_UNSET}",
+        &env,
+        restrictions,
+        false,
+        false,
+        None,
+    )
+    .unwrap_err();
+    assert_eq!(
+        err.to_string().lines().count(),
+        1,
+        "fallback-error must not produce a second outer error"
+    );
 }
 
 #[test]
