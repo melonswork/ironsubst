@@ -165,4 +165,4 @@ mise run lint:fix      # Auto-fixes clippy warnings
 
 See [comparison.md](comparison.md) for a full breakdown of how ironsubst, a8m/envsubst, gettext envsubst, and bash handle every supported operator across all variable states (unset, empty, set), including the string-manipulation operators (`${#VAR}`, prefix/suffix strip, substring) that envsubst does not support.
 
-Regenerate it locally with `mise run compare`.
+Regenerate it locally with `mise run compare`. The script auto-detects the gettext `envsubst` binary; if it is not on `PATH` under that name, set `GETTEXT_ENVSUBST_PATH` to its absolute path before running.
