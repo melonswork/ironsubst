@@ -1,4 +1,4 @@
-FROM rust:1.95@sha256:f9c6a2fd2ddbc23e336b6257a5245e31f996953ef06cd13a59fa0a1df2d5c252 AS builder
+FROM rust:1.95@sha256:a9cfb755b33f5bb872610cbdb25da61f527416b28fc9c052bbce4bef93e7799a AS builder
 
 WORKDIR /usr/src/ironsubst
 COPY . .
