@@ -1,8 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
+  "extends": ["config:recommended"],
+  "enabledManagers": ["cargo", "dockerfile", "github-actions"],
+  "pinDigests": true,
   "packageRules": [
     {
       "matchManagers": ["cargo"],
@@ -23,12 +23,6 @@
       "labels": ["dependencies", "ci"]
     }
   ],
-  "rust": {
-    "enabled": true
-  },
-  "dockerfile": {
-    "enabled": true
-  },
   "semanticCommits": "enabled",
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
