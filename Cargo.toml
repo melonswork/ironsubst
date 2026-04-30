@@ -34,7 +34,7 @@ exclude = [
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
-clap_mangen = "0.2"
+clap_mangen = "0.3"
 tempfile = "3"
 thiserror = "2"
 
