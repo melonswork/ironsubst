@@ -201,3 +201,26 @@ fn output_new_file_respects_umask() {
         "new file should honour umask 022 → 0644"
     );
 }
+
+#[test]
+#[cfg(unix)]
+fn output_rejects_symlink() {
+    let target = NamedTempFile::new().unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let link = dir.path().join("link");
+    std::os::unix::fs::symlink(target.path(), &link).unwrap();
+
+    cmd()
+        .arg("--output")
+        .arg(&link)
+        .args(["--", "hello"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("symlink"));
+
+    // The symlink must not have been replaced by a regular file.
+    assert!(
+        link.symlink_metadata().unwrap().file_type().is_symlink(),
+        "symlink should be untouched after rejection"
+    );
+}

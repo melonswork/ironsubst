@@ -169,6 +169,21 @@ fn main() {
                 let dest = Path::new(&output_file);
                 let dir = dest.parent().unwrap_or_else(|| Path::new("."));
 
+                // Reject symlinks: rename() replaces the symlink itself rather
+                // than following it, leaving the target file unchanged.
+                #[cfg(unix)]
+                if dest
+                    .symlink_metadata()
+                    .map(|m| m.file_type().is_symlink())
+                    .unwrap_or(false)
+                {
+                    eprintln!(
+                        "error: output path '{}' is a symlink; pass the resolved target path instead",
+                        output_file
+                    );
+                    std::process::exit(1);
+                }
+
                 // Preserve permissions of an existing destination file so that
                 // replacing a 0755 script does not silently reset it to 0600.
                 let existing_mode = dest.metadata().ok().map(|m| m.permissions());
