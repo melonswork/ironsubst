@@ -4,6 +4,8 @@ use ironsubst::{envfile, eval::Restrictions, process};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read, Write};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 #[derive(Parser, Debug)]
@@ -179,6 +181,21 @@ fn main() {
                     eprintln!("Error writing to temp file: {}", e);
                     std::process::exit(1);
                 });
+                #[cfg(unix)]
+                {
+                    let perms = existing_mode.unwrap_or_else(|| {
+                        // New file: apply 0o666 through the current umask, matching
+                        // what open(O_CREAT, 0666) would produce.
+                        let mask = unsafe { libc::umask(0) };
+                        unsafe { libc::umask(mask) };
+                        std::fs::Permissions::from_mode(0o666 & !(mask as u32))
+                    });
+                    std::fs::set_permissions(tmp.path(), perms).unwrap_or_else(|e| {
+                        eprintln!("Error setting permissions on temp file: {}", e);
+                        std::process::exit(1);
+                    });
+                }
+                #[cfg(not(unix))]
                 if let Some(perms) = existing_mode {
                     std::fs::set_permissions(tmp.path(), perms).unwrap_or_else(|e| {
                         eprintln!("Error setting permissions on temp file: {}", e);

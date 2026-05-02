@@ -174,3 +174,30 @@ fn output_file_preserves_permissions() {
         "output file permissions should be preserved"
     );
 }
+
+#[test]
+#[cfg(unix)]
+fn output_new_file_respects_umask() {
+    use std::os::unix::process::CommandExt;
+
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("out.txt");
+
+    let mut raw = std::process::Command::new(env!("CARGO_BIN_EXE_ironsubst"));
+    raw.args(["--output", out.to_str().unwrap(), "--", "hello"]);
+    // Set umask in the child process only — doesn't affect the test process.
+    unsafe {
+        raw.pre_exec(|| {
+            libc::umask(0o022);
+            Ok(())
+        });
+    }
+    assert!(raw.status().unwrap().success());
+
+    let mode = std::fs::metadata(&out).unwrap().permissions().mode();
+    assert_eq!(
+        mode & 0o777,
+        0o644,
+        "new file should honour umask 022 → 0644"
+    );
+}
