@@ -6,6 +6,68 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.0](https://github.com/melonswork/ironsubst/compare/0.1.0..0.2.0) - 2026-05-02
+
+### 🚀 Features
+
+- *(eval)* Implement ${#VAR} string-length operator
+- *(glob)* Add pure-Rust glob matcher for parameter expansion patterns
+- *(eval)* Implement ${VAR#pat}, ${VAR##pat}, ${VAR%pat}, ${VAR%%pat} strip operators
+- *(eval)* Implement ${VAR:offset} and ${VAR:offset:length} substring operator
+
+### 🐛 Bug Fixes
+
+- *(envfile)* Reject non-comment trailing content after quoted values
+- *(cli)* Make --input and inline template mutually exclusive
+- *(eval)* Respect --fail-fast when a fallback expression itself errors
+- *(parser)* Allow $_ and ${_} to be substituted like any other variable
+- *(envfile)* Implement POSIX '\'' single-quote concatenation
+- *(main)* Preserve file permissions when overwriting with -o
+- *(eval)* Re-escape \$ as \$\$ when reconstructing verbatim prefix output
+- *(parser)* Limit expression nesting depth to prevent stack overflow
+- *(parser)* Preserve unsupported operators verbatim instead of silently dropping them
+- *(eval)* --require-nonempty-values now also fails on unset variables
+- *(parser)* Emit ${#VAR} verbatim when malformed or --no-digit rejects name
+- *(eval)* Preserve bare \$ verbatim in prefix-filter reconstruction
+- *(eval)* String-manipulation operators now respect --require-values/--require-nonempty-values
+- *(eval)* Evaluate variable references inside strip-operator patterns
+- *(parser/eval)* Evaluate variable references in substring offset/length
+- *(eval)* Preserve ${VAR:$IDX} verbatim when index variables don't match --prefix
+- *(eval)* Preserve strip expressions verbatim when pattern variable doesn't match --prefix
+- *(eval)* Simplify Length original_text format string
+- *(eval)* Recursive unmatched-var check for prefix-filter guards
+- *(glob)* Memoize glob_rec to eliminate exponential backtracking
+- *(mise)* Add actionlint to tools list
+- *(eval)* Suppress outer Error-operator error when fallback itself errors
+- *(deps)* Update rust crate clap_mangen to 0.3 ([#7](https://github.com/melonswork/ironsubst/pull/7))
+- *(main)* New output files now respect umask
+- *(main)* Reject symlink paths passed to -o
+
+### 🚜 Refactor
+
+- *(eval)* Extract check_restrictions helper
+- *(eval)* Extract eval_to_string helper
+
+### 📚 Documentation
+
+- Document --env-file, --ignore-env, and --prefix in README
+- Document new string-manipulation operators in README
+- *(readme)* Replace embedded comparison table with link to comparison.md
+- *(ast)* Clarify bool semantics in Operator comments
+- Add --locked to cargo install command in README
+- Note GETTEXT_ENVSUBST_PATH requirement for compare task
+
+### 🧪 Testing
+
+- *(cli)* Add CLI integration test suite using assert_cmd
+- Regression tests for fail-fast-in-fallback and $_ substitution
+- *(glob)* Add negated-range and verbatim passthrough tests
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v0.1.0
+- Formatting
+- Add .dockerignore to exclude build artifacts from context
 ## [0.1.0] - 2026-04-24
 
 ### 🚀 Features
