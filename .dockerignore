@@ -1,0 +1,22 @@
+# Build output — largest exclusion, can be several GB
+target/
+fuzz/target/
+fuzz/corpus/
+fuzz/artifacts/
+
+# Git internals
+.git/
+
+# Generated artifacts not needed for the build
+man/
+completions/
+lcov.info
+sbom.json
+bench-results*
+demo.gif
+demo.tape
+comparison.md
+
+# Dev/CI config not needed inside the image
+.github/
+.DS_Store
